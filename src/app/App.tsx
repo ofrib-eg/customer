@@ -40,8 +40,8 @@ function AppContent() {
   const [visibleItems, setVisibleItems] = useState<any[]>(mockData);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [activeSidebarModule, setActiveSidebarModule] = useState<string>("Items");
-  const [currentSubItem, setCurrentSubItem] = useState<string>("Items");
+  const [activeSidebarModule, setActiveSidebarModule] = useState<string>("Customer");
+  const [currentSubItem, setCurrentSubItem] = useState<string>("Customers");
   const [showBanner, setShowBanner] = useState<boolean>(false);
   const [isItemPanelOpen, setIsItemPanelOpen] = useState<boolean>(false);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState<boolean>(false);
@@ -194,12 +194,6 @@ function AppContent() {
     width: typeof window !== 'undefined' ? window.innerWidth : 1200, 
     height: typeof window !== 'undefined' ? window.innerHeight : 800 
   });
-
-  useEffect(() => {
-    if (location.pathname === "/") {
-      navigate("/store-routines", { replace: true });
-    }
-  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const handleResize = () => {

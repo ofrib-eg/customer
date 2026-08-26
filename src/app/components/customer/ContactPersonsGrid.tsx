@@ -59,9 +59,18 @@ export function ContactPersonsGrid() {
   return (
     <div className="flex flex-col gap-[13px]">
       {/* Header */}
-      <h3 className="font-['Roboto_Condensed:Bold',sans-serif] text-[16px] leading-[19px] text-[#1a1a1a] uppercase">
-        Contact person(s)
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-['Roboto_Condensed',sans-serif] font-bold text-[16px] leading-[19px] tracking-[0px] text-[#1a1a1a] uppercase">
+          Contact person(s)
+        </h3>
+        <button
+          type="button"
+          onClick={() => console.log("Add contact person clicked")}
+          className="bg-[#262626] hover:bg-[#1a1a1a] text-white font-['Roboto_Condensed',sans-serif] font-bold text-[12px] uppercase tracking-[0px] px-[16px] py-[8px] rounded-[4px] cursor-pointer"
+        >
+          Add contact person
+        </button>
+      </div>
 
       {/* Table */}
       <div className="overflow-auto">

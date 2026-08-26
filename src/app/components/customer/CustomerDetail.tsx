@@ -10,7 +10,10 @@ import { ReactivateOrganizationDialog } from "./ReactivateOrganizationDialog";
 import { OrganizationDeletedDialog } from "./OrganizationDeletedDialog";
 import { ChooseOrganizationModal } from "./ChooseOrganizationModal";
 import { motion as Motion, AnimatePresence } from "motion/react";
-import { Check, X } from "lucide-react";
+import { Check, X, Link as LinkIcon } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/card";
+
+const DETAIL_CARD_CLASS = "shadow-none";
 
 // Mock data import (we'll need to get this from the grid component)
 const mockCustomers = [
@@ -203,11 +206,15 @@ const mockCustomers = [
   }
 ];
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
+function SectionHeader({ children, variant = "default", icon }: { children: React.ReactNode; variant?: "default" | "address"; icon?: React.ReactNode }) {
+  const textClassName = variant === "address"
+    ? "font-['Roboto_Condensed',sans-serif] font-normal text-[14px] leading-[17px] tracking-[0px] text-[#1a1a1a] uppercase"
+    : "font-['Roboto_Condensed',sans-serif] font-bold text-[16px] leading-[19px] tracking-[0px] text-[#1a1a1a] uppercase";
   return (
-    <h3 className="font-['Roboto_Condensed:Bold',sans-serif] text-[12px] leading-[14px] text-[#1a1a1a] uppercase mb-[10px]">
-      {children}
-    </h3>
+    <div className="flex items-center gap-[6px] mb-[10px]">
+      <h3 className={textClassName}>{children}</h3>
+      {icon}
+    </div>
   );
 }
 
@@ -303,7 +310,7 @@ function AddressSection({ title, inheritChecked, isInactive }: { title: string; 
 
   return (
     <div className="flex-1 min-w-[200px]">
-      <SectionHeader>{title}</SectionHeader>
+      <SectionHeader variant="address">{title}</SectionHeader>
       <label 
         className={`content-stretch flex gap-[10px] items-start pb-[15px] pt-[5px] relative ${isInactive ? 'cursor-default' : 'cursor-pointer'}`}
         onClick={() => !isInactive && setInherit(!inherit)}
@@ -806,7 +813,7 @@ export function CustomerDetail() {
   return (
     <>
       <div className="flex flex-col h-full bg-white overflow-auto">
-        <div className="p-[20px] flex-1 overflow-auto">
+        <div className="py-[20px] px-[16px] sm:px-[24px] lg:px-[32px] xl:px-[48px] flex-1 overflow-auto max-w-[1800px] w-full mx-auto">
           {/* Organization Status Banner */}
           {organizationStatus && (
             <div className="mb-[20px] px-[16px] py-[12px] border-l-4 bg-[#f5f5f5] border-[#757575]">
@@ -829,100 +836,188 @@ export function CustomerDetail() {
           )}
           
           {/* Top Section */}
-          <div className="flex gap-[60px]">
-            {/* Customer Column */}
-            <div className="flex-1 min-w-[200px]">
-              <SectionHeader>Customer</SectionHeader>
-              {isInactive ? (
-                <ReadOnlyField label="Customer name" value={customer.customerName} />
-              ) : (
-                <InputField label="Customer name" value={customer.customerName} required />
-              )}
-              {organizationStatus !== "deleted" ? (
-                <ReadOnlyField label="Org. number" value={customer.orgNumber} />
-              ) : (
-                <ReadOnlyField label="Org. number" value="–" />
-              )}
-              <ReadOnlyField label="Email" value={customer.email} />
-              <ReadOnlyField label="Phone number" value={customer.phone} />
-              <ReadOnlyField label="Customer status" value={isInactive ? "Inactive" : "Active"} />
-              {isInactive && deactivationReason && (
-                <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
-              )}
+          {/* Masonry-style grid: Customer card spans the full left height; Organisation+Credit
+              share row 1 on the right, Addresses spans that same right-hand width on row 2,
+              Contact persons spans the full width on row 3. */}
+          <style>{`
+            .customer-top-grid {
+              display: grid;
+              grid-template-columns: 1fr;
+              grid-template-areas: "customer" "organisation" "credit" "addresses" "contact";
+              gap: 1rem;
+            }
+            @media (min-width: 1024px) {
+              .customer-top-grid {
+                grid-template-columns: 3fr 2fr 5fr;
+                grid-template-areas:
+                  "customer organisation credit"
+                  "customer addresses addresses"
+                  "contact contact contact";
+              }
+              .customer-top-grid.no-org {
+                grid-template-columns: 3fr 7fr;
+                grid-template-areas:
+                  "customer credit"
+                  "customer addresses"
+                  "contact contact";
+              }
+            }
+          `}</style>
+          <div className={`customer-top-grid mb-4${organizationStatus === "deleted" ? " no-org" : ""}`}>
+            {/* Customer identity card */}
+            <div style={{ gridArea: "customer" }}>
+              <Card className={`${DETAIL_CARD_CLASS} h-full`}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between gap-[10px] mb-[4px]">
+                    <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
+                      {customer.customerName}
+                    </h2>
+                    <span className={`shrink-0 font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border ${isInactive ? "border-[#999] text-[#999]" : "border-[#1a1a1a] text-[#1a1a1a]"}`}>
+                      {isInactive ? "Inactive" : "Active"}
+                    </span>
+                  </div>
+                  <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">{customer.customerType}</p>
+                  <div className="border-t border-[#E5E7EB] mb-[16px]" />
+
+                  <SectionHeader>Details</SectionHeader>
+                  <ReadOnlyField label="Customer number" value={customer.customerNumber} />
+                  {isInactive || organizationStatus === "deleted" ? (
+                    <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
+                  ) : (
+                    <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
+                  )}
+                  {isInactive ? (
+                    <ReadOnlyField label="Customer group" value={customer.customerGroup || "–"} />
+                  ) : (
+                    <SelectField
+                      label="Customer group"
+                      value={customer.customerGroup}
+                      options={[
+                        { value: "Corporate", label: "Corporate" },
+                        { value: "Wholesale", label: "Wholesale" },
+                        { value: "VIP", label: "VIP" },
+                        { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
+                      ]}
+                    />
+                  )}
+                  <ReadOnlyField label="Profile" value={customer.store} />
+                  <CheckboxField label="Credit customer" checked={!!customer.creditC} />
+
+                  <div className="mt-[16px]">
+                    <SectionHeader>Contact details</SectionHeader>
+                    <ReadOnlyField label="Email" value={customer.email} />
+                    <ReadOnlyField label="Phone number" value={customer.phone} />
+                  </div>
+
+                  <div className="mt-[16px]">
+                    <SectionHeader>Notes</SectionHeader>
+                    <p className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a]">
+                      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                    </p>
+                  </div>
+
+                  {isInactive && deactivationReason && (
+                    <div className="mt-[16px] pt-[10px] border-t border-[#E5E7EB]">
+                      <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Details Column */}
-            <div className="flex-1 min-w-[200px]">
-              <SectionHeader>Details</SectionHeader>
-              <ReadOnlyField label="Customer type" value={customer.customerType} />
-              <ReadOnlyField label="Customer number" value={customer.customerNumber} />
-              {isInactive ? (
-                <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
-              ) : organizationStatus !== "deleted" ? (
-                <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
-              ) : (
-                <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
-              )}
-              <ReadOnlyField label="Store" value={customer.store} />
-              {isInactive ? (
-                <ReadOnlyField label="Customer group" value={customer.customerGroup || "–"} />
-              ) : (
-                <SelectField 
-                  label="Customer group" 
-                  value={customer.customerGroup}
-                  options={[
-                    { value: "Corporate", label: "Corporate" },
-                    { value: "Wholesale", label: "Wholesale" },
-                    { value: "VIP", label: "VIP" },
-                    { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
-                  ]}
-                />
-              )}
-            </div>
-
-            {organizationStatus !== "deleted" ? (
-              <>
-                <AddressSection title="General address" inheritChecked={true} isInactive={isInactive} />
-                <AddressSection title="Delivery address" inheritChecked={true} isInactive={isInactive} />
-                <AddressSection title="Invoice address" inheritChecked={true} isInactive={isInactive} />
-              </>
-            ) : (
-              <>
-                <div className="flex-1 min-w-[200px]">
-                  <SectionHeader>General address</SectionHeader>
-                  <ReadOnlyField label="Address line 1" value="–" />
-                  <ReadOnlyField label="Address line 2" value="–" />
-                  <ReadOnlyField label="Postal code" value="–" />
-                  <ReadOnlyField label="City" value="–" />
-                  <ReadOnlyField label="Country" value="–" />
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <SectionHeader>Delivery address</SectionHeader>
-                  <ReadOnlyField label="Address line 1" value="–" />
-                  <ReadOnlyField label="Address line 2" value="–" />
-                  <ReadOnlyField label="Postal code" value="–" />
-                  <ReadOnlyField label="City" value="–" />
-                  <ReadOnlyField label="Country" value="–" />
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <SectionHeader>Invoice address</SectionHeader>
-                  <ReadOnlyField label="Address line 1" value="–" />
-                  <ReadOnlyField label="Address line 2" value="–" />
-                  <ReadOnlyField label="Postal code" value="–" />
-                  <ReadOnlyField label="City" value="–" />
-                  <ReadOnlyField label="Country" value="–" />
-                </div>
-              </>
+            {/* Organisation card */}
+            {organizationStatus !== "deleted" && (
+              <div style={{ gridArea: "organisation" }}>
+                <Card className={DETAIL_CARD_CLASS}>
+                  <CardContent className="pt-6">
+                    <SectionHeader icon={<LinkIcon className="size-[14px] text-[#1a1a1a]" />}>Organisation</SectionHeader>
+                    <ReadOnlyField label="Organisation name" value={organizationName} />
+                    <ReadOnlyField label="Organisation number" value={customer.orgNumber} />
+                    <ReadOnlyField label="Branch number" value={customer.orgNumber} />
+                  </CardContent>
+                </Card>
+              </div>
             )}
-          </div>
 
-          {/* Contact Persons Section */}
-          <div className="mt-[60px]">
-            <ContactPersonsGrid />
+            {/* Credit card */}
+            <div style={{ gridArea: "credit" }}>
+              <Card className={DETAIL_CARD_CLASS}>
+                <CardContent className="pt-6">
+                  <SectionHeader>Credit</SectionHeader>
+                  <div className="grid grid-cols-2 gap-x-6">
+                    <div>
+                      <ReadOnlyField label="Credit limit" value={customer.creditBalance || "0"} />
+                      <ReadOnlyField label="Credit balance" value="0" />
+                      <ReadOnlyField label="Balance due date" value="2026-04-01" />
+                    </div>
+                    <div>
+                      <CheckboxField label="Reference number required" checked={false} />
+                      <CheckboxField label="Credit locked" checked={false} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Addresses - same combined width as Organisation + Credit above */}
+            <div style={{ gridArea: "addresses" }}>
+              <Card className={DETAIL_CARD_CLASS}>
+                <CardContent className="pt-6">
+                  <SectionHeader>Addresses</SectionHeader>
+                  <div className="@container">
+                    <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-4">
+                      {organizationStatus !== "deleted" ? (
+                        <>
+                          <AddressSection title="General address" inheritChecked={true} isInactive={isInactive} />
+                          <AddressSection title="Delivery address" inheritChecked={true} isInactive={isInactive} />
+                          <AddressSection title="Invoice address" inheritChecked={true} isInactive={isInactive} />
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <SectionHeader variant="address">General address</SectionHeader>
+                            <ReadOnlyField label="Address line 1" value="–" />
+                            <ReadOnlyField label="Address line 2" value="–" />
+                            <ReadOnlyField label="Postal code" value="–" />
+                            <ReadOnlyField label="City" value="–" />
+                            <ReadOnlyField label="Country" value="–" />
+                          </div>
+                          <div>
+                            <SectionHeader variant="address">Delivery address</SectionHeader>
+                            <ReadOnlyField label="Address line 1" value="–" />
+                            <ReadOnlyField label="Address line 2" value="–" />
+                            <ReadOnlyField label="Postal code" value="–" />
+                            <ReadOnlyField label="City" value="–" />
+                            <ReadOnlyField label="Country" value="–" />
+                          </div>
+                          <div>
+                            <SectionHeader variant="address">Invoice address</SectionHeader>
+                            <ReadOnlyField label="Address line 1" value="–" />
+                            <ReadOnlyField label="Address line 2" value="–" />
+                            <ReadOnlyField label="Postal code" value="–" />
+                            <ReadOnlyField label="City" value="–" />
+                            <ReadOnlyField label="Country" value="–" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Contact persons - full width */}
+            <div style={{ gridArea: "contact" }}>
+              <Card className={DETAIL_CARD_CLASS}>
+                <CardContent className="pt-6">
+                  <ContactPersonsGrid />
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
-      
+
       {/* Modals */}
       <DeactivateBusinessCustomerModal
         isOpen={isDeactivateModalOpen}

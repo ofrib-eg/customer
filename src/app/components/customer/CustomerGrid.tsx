@@ -476,7 +476,7 @@ export function CustomerGrid() {
                               />
                             </div>
                           ) : col.id === "customerNumber" ? (
-                            <span className="truncate block text-[#1c7862] hover:underline">{customer[col.id as keyof typeof customer]}</span>
+                            <span className="truncate block text-[#1A1A1A] underline">{customer[col.id as keyof typeof customer]}</span>
                           ) : (
                             <span className="truncate block">{customer[col.id as keyof typeof customer]}</span>
                           )}
