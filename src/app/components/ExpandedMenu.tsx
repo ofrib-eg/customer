@@ -63,17 +63,19 @@ const customerMenuSections = [
     items: [
       "Order dispatch dashboard",
       "Service orders",
-      "Customer orders",
-      "Offers",
     ],
   },
   {
     title: "Customer",
-    items: ["Customers", "Customer cards", "Customer groups", "Contacts", "Organizations"],
+    items: ["Customers", "Customer cards", "Customer groups", "Contacts", "Customer orders", "Offers", "Organizations"],
   },
   {
     title: "System parameters",
     items: ["Customer and member", "Service order"],
+  },
+  {
+    title: "Service order",
+    items: ["Service locations"],
   },
 ];
 

@@ -81,15 +81,26 @@ export const mockOrganizations = [
     b2bCustomers: 9,
     status: "Active"
   },
-  { 
-    id: 8, 
+  {
+    id: 8,
     orgNumber: "559999-8888",
-    organizationName: "Scandinavian Foods AB", 
+    organizationName: "Scandinavian Foods AB",
     branchNumber: "–",
-    country: "SE", 
-    organizationType: "Branch", 
+    country: "SE",
+    organizationType: "Branch",
     source: "Dun & Bradstreet",
     b2bCustomers: 18,
+    status: "Active"
+  },
+  {
+    id: 9,
+    orgNumber: "968992600",
+    organizationName: "EG Retail Trondheim",
+    branchNumber: "9689926",
+    country: "NO",
+    organizationType: "Branch",
+    source: "Manual",
+    b2bCustomers: 1,
     status: "Active"
   },
 ];

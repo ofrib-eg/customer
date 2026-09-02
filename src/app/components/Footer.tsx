@@ -5,7 +5,6 @@ import * as Popover from "@radix-ui/react-popover";
 import Icon from "@/imports/Icon-10-653";
 import svgPathsMore from "@/imports/svg-oqev7ygrue";
 import { useModified } from "@/app/contexts/ModifiedContext";
-import { NewRelationshipModal } from "./customer/NewRelationshipModal";
 import { NewOrganizationChoiceModal } from "./customer/NewOrganizationChoiceModal";
 import { ChooseOrganizationSearchModal } from "./customer/ChooseOrganizationSearchModal";
 
@@ -137,10 +136,12 @@ export function Footer({
   const isOrganizationsPage = location.pathname === "/customer/organizations";
   const isContactDetailPage = location.pathname.match(/^\/customer\/contacts\/(\d+)$/);
   const isCustomerDetailPage = location.pathname.match(/^\/customer\/customer\/(\d+)$/);
+  const isNewCustomerPage = location.pathname === "/customer/new";
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "details";
   const isStorePriceTab = activeTab === "store-price";
   const isLocalValuesTab = activeTab === "local-values";
+  const isCustomerSalesOrOffersTab = activeTab === "sales" || activeTab === "offers";
   
   // Try to use contact context if available
   let contactAnonymized = isContactAnonymized;
@@ -159,7 +160,6 @@ export function Footer({
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isLocalValuesOpen, setIsLocalValuesOpen] = useState(false);
-  const [isNewRelationshipOpen, setIsNewRelationshipOpen] = useState(false);
   const [isNewOrgChoiceOpen, setIsNewOrgChoiceOpen] = useState(false);
   const [isOrgSearchOpen, setIsOrgSearchOpen] = useState(false);
 
@@ -689,7 +689,21 @@ export function Footer({
 
       <div className="h-[56px] bg-white flex items-center px-[20px] shrink-0 border-t border-[#CCCCCC] justify-end relative z-[5100]">
         <div ref={containerRef} className="flex-1 max-w-full overflow-hidden flex justify-end">
-          {isCustomerDetailPage ? (
+          {isNewCustomerPage ? (
+            <div className="flex items-center gap-2">
+              <ActionButton onClick={() => navigate("/customer/customer")}>Cancel</ActionButton>
+              <ActionButton
+                isPrimary
+                onClick={() => {
+                  if (typeof window !== 'undefined' && (window as any).createCustomer) {
+                    (window as any).createCustomer();
+                  }
+                }}
+              >
+                Create
+              </ActionButton>
+            </div>
+          ) : isCustomerDetailPage ? (
             <div className="flex items-center gap-2">
               <Popover.Root open={isMoreOpen} onOpenChange={setIsMoreOpen}>
                 <Popover.Trigger asChild>
@@ -753,6 +767,19 @@ export function Footer({
                       ) : (
                         <>
                           {/* Private customer menu options */}
+                          {(typeof window !== 'undefined' && !(window as any).hasCustomerCard) && (
+                            <button
+                              onClick={() => {
+                                if (typeof window !== 'undefined' && (window as any).addCustomerCard) {
+                                  (window as any).addCustomerCard();
+                                }
+                                setIsMoreOpen(false);
+                              }}
+                              className="text-left text-[14px] font-normal text-[#1A1A1A] hover:bg-[#EAEAEA] relative outline-none cursor-pointer flex items-center h-[36px] w-full pl-4 whitespace-nowrap"
+                            >
+                              Add customer card
+                            </button>
+                          )}
                           {!(typeof window !== 'undefined' && (window as any).isCustomerInactive) ? (
                             <button
                               onClick={() => {
@@ -799,14 +826,18 @@ export function Footer({
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
-              {(typeof window !== 'undefined' && (window as any).isBusinessCustomer) && (
-                <ActionButton onClick={() => console.log("Add contact person clicked")}>
-                  Add contact person
+              {!isCustomerSalesOrOffersTab && (
+                <ActionButton
+                  isPrimary
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && (window as any).saveCustomer) {
+                      (window as any).saveCustomer();
+                    }
+                  }}
+                >
+                  Save
                 </ActionButton>
               )}
-              <ActionButton isPrimary onClick={() => console.log("Save clicked")}>
-                Save
-              </ActionButton>
             </div>
           ) : isContactDetailPage ? (
             <div className="flex items-center gap-2">
@@ -855,9 +886,15 @@ export function Footer({
                   </Popover.Portal>
                 </Popover.Root>
               )}
-              <NewRelationshipModal />
-              <ActionButton onClick={() => setIsNewRelationshipOpen(true)}>New relationship</ActionButton>
-              <ActionButton isPrimary onClick={() => console.log("Save clicked")} disabled={contactAnonymized}>
+              <ActionButton
+                isPrimary
+                onClick={() => {
+                  if (typeof window !== 'undefined' && (window as any).saveContact) {
+                    (window as any).saveContact();
+                  }
+                }}
+                disabled={contactAnonymized}
+              >
                 Save
               </ActionButton>
             </div>
@@ -866,15 +903,6 @@ export function Footer({
           )}
         </div>
       </div>
-
-      {/* NewRelationshipModal */}
-      {isContactDetailPage && (
-        <NewRelationshipModal
-          isOpen={isNewRelationshipOpen}
-          onClose={() => setIsNewRelationshipOpen(false)}
-          contactId={isContactDetailPage[1]}
-        />
-      )}
 
       {/* NewOrganizationChoiceModal */}
       {isOrganizationsPage && (

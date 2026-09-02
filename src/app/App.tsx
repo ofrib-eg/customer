@@ -591,7 +591,7 @@ function AppContent() {
       parentModule = "Store";
     } else if (["Member identities", "Member cards", "Member statistics", "Member segmentation", "Coupons", "Coupons (On-premise)", "Stamp cards", "Bonus", "Bonus Rollouts", "Loyalty programs", "Bonus rules", "Marketing distribution"].includes(item)) {
       parentModule = "Loyalty";
-    } else if (["Order dispatch dashboard", "Service orders", "Customer orders", "Offers", "Customers", "Customer cards", "Customer groups", "Contacts", "Organizations"].includes(item)) {
+    } else if (["Order dispatch dashboard", "Service orders", "Customer orders", "Offers", "Customers", "Customer cards", "Customer groups", "Contacts", "Organizations", "Service locations"].includes(item)) {
       parentModule = "Customer";
     } else if (["Dashboards", "Budget", "EOBD log", "Import log"].includes(item)) {
       parentModule = "Reporting";
@@ -613,6 +613,7 @@ function AppContent() {
     else if (item === "Customers") navigate("/customer");
     else if (item === "Contacts") navigate("/customer/contacts");
     else if (item === "Organizations") navigate("/customer/organizations");
+    else if (item === "Offers") navigate("/customer/offers");
   };
 
   const handleToggleMenu = (label: string) => setOpenMenu(openMenu === label ? null : label);
@@ -648,9 +649,8 @@ function AppContent() {
   }, []);
 
   const handleNewCustomer = useCallback(() => {
-    console.log("New customer clicked");
-    // TODO: Implement new customer modal or navigation
-  }, []);
+    navigate("/customer/new");
+  }, [navigate]);
 
   const handleOpenActivePrice = useCallback(() => {
     openWindow("active");
@@ -861,7 +861,7 @@ function AppContent() {
         />
       </div>
 
-      <WindowFrame 
+      <WindowFrame
         title={selectedItemName ? <div className="flex items-center min-w-0 flex-1"><span className="shrink-0">ITEM SALES</span><span className="mx-2 opacity-40 shrink-0">–</span><span className="text-[#CCCCCC] truncate min-w-0 flex-1">{selectedItemName}</span></div> : "ITEM SALES"} 
         isOpen={isSalesWindowOpen} onClose={() => closeWindow("sales")} onNavigateNext={handleNavigateNext} onNavigatePrev={handleNavigatePrev} hasNext={hasNext} hasPrev={hasPrev} stackIndex={windowStack.indexOf("sales")} zIndex={6000 + windowStack.indexOf("sales")} 
         isMaximized={maximizedWindows.includes("sales")} 

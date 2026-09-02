@@ -5,11 +5,14 @@ import { CustomerCardsGrid } from "./customer/CustomerCardsGrid";
 import { CustomerGroupsGrid } from "./customer/CustomerGroupsGrid";
 import { ContactsGrid } from "./customer/ContactsGrid";
 import { Organizations } from "./customer/Organizations";
+import { OffersRegistryGrid } from "./customer/OffersRegistryGrid";
+import { OfferRegistryDetail } from "./customer/OfferRegistryDetail";
 import { CustomerDetail } from "./customer/CustomerDetail";
 import { CustomerCardDetail } from "./customer/CustomerCardDetail";
 import { CustomerGroupDetail } from "./customer/CustomerGroupDetail";
 import { ContactDetail } from "./customer/ContactDetail";
 import { OrganizationDetail } from "./customer/OrganizationDetail";
+import { NewCustomerPage } from "./customer/NewCustomerPage";
 
 export function CustomerModule() {
   const navigate = useNavigate();
@@ -29,6 +32,7 @@ export function CustomerModule() {
       <div className="flex-1 overflow-hidden">
         <Routes>
           <Route path="/" element={<Navigate to="/customer/customer" replace />} />
+          <Route path="/new" element={<NewCustomerPage />} />
           <Route path="/customer" element={<CustomerGrid />} />
           <Route path="/customer/:id" element={<CustomerDetail />} />
           <Route path="/customer-cards" element={<CustomerCardsGrid />} />
@@ -39,6 +43,8 @@ export function CustomerModule() {
           <Route path="/contacts/:id" element={<ContactDetail />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/organizations/:id" element={<OrganizationDetail />} />
+          <Route path="/offers" element={<OffersRegistryGrid />} />
+          <Route path="/offers/:id" element={<OfferRegistryDetail />} />
         </Routes>
       </div>
     </div>

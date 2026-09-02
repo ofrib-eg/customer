@@ -6,6 +6,7 @@ import breadcrumbSvgPaths from "@/imports/svg-9eaca977ir";
 import svgPathsBell from "@/imports/svg-rt0k425s7c";
 import { mockContacts } from "./customer/ContactsGrid";
 import { mockOrganizations } from "./customer/OrganizationsGrid";
+import { loadNewCustomers } from "./customer/newCustomers";
 import { useContact } from "@/app/contexts/ContactContext";
 
 // Mock customer data
@@ -13,7 +14,7 @@ const mockCustomers = [
   { 
     id: 1, 
     customerNumber: "0000000001", 
-    extCustomerNumber: "4641-fee-6d31-fa17-...",
+    extCustomerNumber: "482103",
     customerName: "Hanna Hansen",
     customerType: "Private customer",
     store: "1050",
@@ -30,7 +31,7 @@ const mockCustomers = [
   { 
     id: 2, 
     customerNumber: "0000000002", 
-    extCustomerNumber: "ORG-2024-001",
+    extCustomerNumber: "3910284",
     customerName: "Norsk Dagligvare AS",
     customerType: "Business customer",
     store: "1050",
@@ -47,7 +48,7 @@ const mockCustomers = [
   { 
     id: 3, 
     customerNumber: "0000000003", 
-    extCustomerNumber: "ORG-2024-002",
+    extCustomerNumber: "82910473",
     customerName: "Bergen Handel AS",
     customerType: "Business customer",
     store: "1051",
@@ -64,7 +65,7 @@ const mockCustomers = [
   { 
     id: 4, 
     customerNumber: "0000000004", 
-    extCustomerNumber: "467",
+    extCustomerNumber: "610284",
     customerName: "Kari Hansen",
     customerType: "Private customer",
     store: "1050",
@@ -81,7 +82,7 @@ const mockCustomers = [
   { 
     id: 5, 
     customerNumber: "0000000005", 
-    extCustomerNumber: "468",
+    extCustomerNumber: "7402918",
     customerName: "Ola Granlie",
     customerType: "Private customer",
     store: "1050",
@@ -98,7 +99,7 @@ const mockCustomers = [
   { 
     id: 6, 
     customerNumber: "0000000006", 
-    extCustomerNumber: "ORG-2024-003",
+    extCustomerNumber: "391847205",
     customerName: "Trondheim Engros AS",
     customerType: "Business customer",
     store: "1052",
@@ -115,7 +116,7 @@ const mockCustomers = [
   { 
     id: 7, 
     customerNumber: "0000000007", 
-    extCustomerNumber: "3rd party customernumber",
+    extCustomerNumber: "528374",
     customerName: "Yngvild Granlie",
     customerType: "Private customer",
     store: "1",
@@ -132,7 +133,7 @@ const mockCustomers = [
   { 
     id: 8, 
     customerNumber: "0000000008", 
-    extCustomerNumber: "ORG-2024-004",
+    extCustomerNumber: "84920173",
     customerName: "Stavanger Retail Group",
     customerType: "Business customer",
     store: "1053",
@@ -149,7 +150,7 @@ const mockCustomers = [
   { 
     id: 9, 
     customerNumber: "0000000009", 
-    extCustomerNumber: "PRV-2024-001",
+    extCustomerNumber: "6031928",
     customerName: "Lars Olsen",
     customerType: "Private customer",
     store: "1050",
@@ -166,7 +167,7 @@ const mockCustomers = [
   { 
     id: 10, 
     customerNumber: "0000000010", 
-    extCustomerNumber: "ORG-2024-005",
+    extCustomerNumber: "274839105",
     customerName: "Oslo Matservice AS",
     customerType: "Business customer",
     store: "1050",
@@ -179,6 +180,23 @@ const mockCustomers = [
     creditBalance: "100000",
     email: "post@oslomatservice.no",
     phone: "+4722998877"
+  },
+  {
+    id: 12,
+    customerNumber: "0000000012",
+    extCustomerNumber: "738291045",
+    customerName: "EG Retail Trondheim",
+    customerType: "Business customer",
+    store: "1052",
+    address: "Skonnertvegen 8-10",
+    postalCode: "7053",
+    orgNumber: "968992600",
+    customerGroup: "Corporate",
+    inactive: false,
+    creditC: "",
+    creditBalance: "",
+    email: "post@egretailtrondheim.no",
+    phone: "+4773123456"
   }
 ];
 
@@ -210,6 +228,7 @@ export function Header({
   const contactId = isContactDetailPage ? parseInt(isContactDetailPage[1]) : null;
   const isCustomerDetailPage = location.pathname.match(/^\/customer\/customer\/(\d+)$/);
   const customerIdFromUrl = isCustomerDetailPage ? parseInt(isCustomerDetailPage[1]) : null;
+  const isNewCustomerPage = location.pathname === "/customer/new";
   const isOrganizationDetailPage = location.pathname.match(/^\/customer\/organizations\/(\d+)$/);
   const organizationIdFromUrl = isOrganizationDetailPage ? parseInt(isOrganizationDetailPage[1]) : null;
   
@@ -230,9 +249,9 @@ export function Header({
     : "";
   
   const contactName = breadcrumbContactName;
-  const customer = customerIdFromUrl ? mockCustomers.find(c => c.id === customerIdFromUrl) : null;
+  const customer = customerIdFromUrl ? [...mockCustomers, ...loadNewCustomers()].find(c => c.id === customerIdFromUrl) : null;
   const isCustomerInactive = (window as any).isCustomerInactive || false;
-  const customerName = customer ? customer.customerName : "";
+  const customerName = customer ? ((window as any).customerName || customer.customerName) : "";
   
   // Get organization for breadcrumb display
   const organization = organizationIdFromUrl ? mockOrganizations.find(o => o.id === organizationIdFromUrl) : null;
@@ -259,28 +278,29 @@ export function Header({
   const displayItemName = itemName || (isDetailsPage ? "Pepsi Max 0.33L" : "");
   const displayItemNumber = itemNumber !== undefined ? itemNumber.toString() : (isDetailsPage ? "100001604" : "");
 
-  // Determine if this is a private customer
+  // Determine if this is a private or business customer
   const isPrivateCustomer = customer && customer.customerType === "Private customer";
+  const isBusinessCustomer = customer && customer.customerType === "Business customer";
 
   return (
-    <div className={`bg-[#37836E] flex flex-col shrink-0 relative z-[100] ${isPrivateCustomer ? "pb-[50px]" : ""}`}>
+    <div className={`bg-[#37836E] flex flex-col shrink-0 relative z-[100] ${(isPrivateCustomer || isBusinessCustomer || isContactDetailPage) ? "pb-[50px]" : ""}`}>
       {/* Main header row: Breadcrumbs and User Actions */}
       <div className={`flex justify-between items-start pl-[30px] pr-[10px] pt-[45px] border-b-0 pb-[15px]`}>
         {/* Breadcrumbs Section */}
         <div className="flex gap-[20px] items-start relative" data-name="Breadcrumb">
           {/* Previous level */}
           <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="Previous level">
-            <Link 
-              to={isContactDetailPage ? "/customer/contacts" : isCustomerDetailPage ? "/customer/customer" : isOrganizationDetailPage ? "/customer/organizations" : isOrganizationsPage ? "/customer/organizations" : isContactsPage ? "/customer/contacts" : isCustomerPage ? "/customer/customer" : isStoreRoutinesPage ? "/store-routines" : isItemsInPromotionsPage ? "/items-in-promotions" : "/items"} 
+            <Link
+              to={isContactDetailPage ? "/customer/contacts" : isCustomerDetailPage ? "/customer/customer" : isNewCustomerPage ? "/customer/customer" : isOrganizationDetailPage ? "/customer/organizations" : isOrganizationsPage ? "/customer/organizations" : isContactsPage ? "/customer/contacts" : isCustomerPage ? "/customer/customer" : isStoreRoutinesPage ? "/store-routines" : isItemsInPromotionsPage ? "/items-in-promotions" : "/items"}
               className={`font-['Roboto:Light',sans-serif] font-light leading-[26.25px] relative shrink-0 text-[21px] transition-colors select-none ${
-                isDetailsPage || isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage ? "text-[rgba(255,255,255,0.8)] hover:text-white" : "text-white"
+                isDetailsPage || isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage || isNewCustomerPage ? "text-[rgba(255,255,255,0.8)] hover:text-white" : "text-white"
               }`}
             >
-              {isContactDetailPage ? "Contacts" : isCustomerDetailPage ? "Customers" : isOrganizationDetailPage ? "Organizations" : isOrganizationsPage ? "Organizations" : isContactsPage ? "Contacts" : isCustomerPage ? "Customers" : isStoreRoutinesPage ? "Store routines" : isItemsInPromotionsPage ? "Items in promotions" : "Items"}
+              {isContactDetailPage ? "Contacts" : isCustomerDetailPage ? "Customers" : isNewCustomerPage ? "Customers" : isOrganizationDetailPage ? "Organizations" : isOrganizationsPage ? "Organizations" : isContactsPage ? "Contacts" : isCustomerPage ? "Customers" : isStoreRoutinesPage ? "Store routines" : isItemsInPromotionsPage ? "Items in promotions" : "Items"}
             </Link>
           </div>
-          
-          {(isDetailsPage || isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage) && (
+
+          {(isDetailsPage || isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage || isNewCustomerPage) && (
             <>
               {/* Chevron */}
               <div className="h-[27px] relative shrink-0 w-[6px]" data-name="Chevron">
@@ -295,7 +315,7 @@ export function Header({
               
               {/* Viewed level */}
               <div className="content-stretch flex gap-[20px] items-start relative shrink-0" data-name="Viewed level">
-                {isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage ? (
+                {isContactDetailPage || isCustomerDetailPage || isOrganizationDetailPage || isNewCustomerPage ? (
                   <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="Viewed level">
                     {isContactDetailPage && isContactAnonymized ? (
                       <p className="font-['Roboto:Light',sans-serif] font-light leading-[26.25px] relative shrink-0 text-[21px] text-white">
@@ -307,7 +327,7 @@ export function Header({
                       </p>
                     ) : (
                       <p className="font-['Roboto:Light',sans-serif] font-light leading-[26.25px] relative shrink-0 text-[21px] text-white">
-                        {isContactDetailPage ? breadcrumbContactName : isCustomerDetailPage ? customerName : organizationName}
+                        {isContactDetailPage ? breadcrumbContactName : isCustomerDetailPage ? customerName : isNewCustomerPage ? "New customer" : organizationName}
                       </p>
                     )}
                   </div>
@@ -448,75 +468,74 @@ export function Header({
         </div>
       )}
 
-      {/* Tab Row: Private Customer detail pages */}
-      {isPrivateCustomer && (
-        <div className="absolute h-[33px] right-[10px] bottom-[0px] w-[310.969px]" data-name="Container">
+      {/* Tab Row: Customer detail pages (same tab set for private and business customers) */}
+      {(isPrivateCustomer || isBusinessCustomer) && (
+        <div className="absolute h-[33px] right-[10px] bottom-[0px]" data-name="Container">
           <div className="flex gap-[2px] items-end relative size-full">
-            {/* Contact Tab */}
-            <div 
-              className={`content-stretch flex flex-col items-start relative shrink-0 ${
-                (searchParams.get("tab") || "contact") === "contact" ? "" : "py-[3px]"
-              }`}
-            >
-              <Link
-                to={`/customer/customer/${customerIdFromUrl}?tab=contact`}
-                className={`content-stretch flex items-start px-[25px] relative shrink-0 ${
-                  (searchParams.get("tab") || "contact") === "contact"
-                    ? "bg-[#333] py-[9px] shadow-[0px_2px_2px_0px_rgba(0,0,0,0.25)]"
-                    : "bg-[#333] py-[6px]"
-                }`}
-              >
-                <p className={`font-['Roboto:Regular',sans-serif] leading-[normal] not-italic relative shrink-0 text-[13px] text-center tracking-[-0.5px] uppercase ${
-                  (searchParams.get("tab") || "contact") === "contact" ? "text-white" : "text-[#ccc]"
-                }`}>
-                  Contact
-                </p>
-              </Link>
-            </div>
-            
-            {/* Details Tab */}
-            <div 
-              className={`content-stretch flex flex-col items-start relative shrink-0 ${
-                searchParams.get("tab") === "details" ? "" : "py-[3px]"
-              }`}
-            >
-              <Link
-                to={`/customer/customer/${customerIdFromUrl}?tab=details`}
-                className={`content-stretch flex items-start px-[25px] relative shrink-0 ${
-                  searchParams.get("tab") === "details"
-                    ? "bg-[#333] py-[9px] shadow-[0px_2px_2px_0px_rgba(0,0,0,0.25)]"
-                    : "bg-[#333] py-[6px]"
-                }`}
-              >
-                <p className={`font-['Roboto:Regular',sans-serif] leading-[normal] not-italic relative shrink-0 text-[13px] text-center tracking-[-0.5px] uppercase ${
-                  searchParams.get("tab") === "details" ? "text-white" : "text-[#ccc]"
-                }`}>
-                  Details
-                </p>
-              </Link>
-            </div>
-            
-            {/* Remarks Tab */}
-            <div 
-              className={`content-stretch flex flex-col items-start relative shrink-0 ${
-                searchParams.get("tab") === "remarks" ? "" : "py-[3px]"
-              }`}
-            >
-              <Link
-                to={`/customer/customer/${customerIdFromUrl}?tab=remarks`}
-                className={`content-stretch flex items-start px-[25px] relative shrink-0 ${
-                  searchParams.get("tab") === "remarks"
-                    ? "bg-[#333] py-[9px] shadow-[0px_2px_2px_0px_rgba(0,0,0,0.25)]"
-                    : "bg-[#333] py-[6px]"
-                }`}
-              >
-                <p className={`font-['Roboto:Regular',sans-serif] leading-[normal] not-italic relative shrink-0 text-[13px] text-center tracking-[-0.5px] uppercase ${
-                  searchParams.get("tab") === "remarks" ? "text-white" : "text-[#ccc]"
-                }`}>
-                  Remarks
-                </p>
-              </Link>
-            </div>
+            {[
+              { key: "details", label: "Details" },
+              { key: "sales", label: "Sales" },
+              { key: "offers", label: "Offers" },
+              { key: "customer-orders", label: "Customer orders" },
+            ].map((tab) => {
+              const isActive = (searchParams.get("tab") || "details") === tab.key;
+              return (
+                <div
+                  key={tab.key}
+                  className={`content-stretch flex flex-col items-start relative shrink-0 ${isActive ? "" : "py-[3px]"}`}
+                >
+                  <Link
+                    to={`/customer/customer/${customerIdFromUrl}?tab=${tab.key}`}
+                    className={`content-stretch flex items-start px-[25px] relative shrink-0 ${
+                      isActive
+                        ? "bg-[#333] py-[9px] shadow-[0px_2px_2px_0px_rgba(0,0,0,0.25)]"
+                        : "bg-[#333] py-[6px]"
+                    }`}
+                  >
+                    <p className={`font-['Roboto:Regular',sans-serif] leading-[normal] not-italic relative shrink-0 text-[13px] text-center tracking-[-0.5px] uppercase whitespace-nowrap ${
+                      isActive ? "text-white" : "text-[#ccc]"
+                    }`}>
+                      {tab.label}
+                    </p>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Tab Row: Contact detail pages */}
+      {isContactDetailPage && (
+        <div className="absolute h-[33px] right-[10px] bottom-[0px]" data-name="Container">
+          <div className="flex gap-[2px] items-end relative size-full">
+            {[
+              { key: "details", label: "Details" },
+              { key: "relationship", label: "Relationship" },
+            ].map((tab) => {
+              const isActive = (searchParams.get("tab") || "details") === tab.key;
+              return (
+                <div
+                  key={tab.key}
+                  className={`content-stretch flex flex-col items-start relative shrink-0 ${isActive ? "" : "py-[3px]"}`}
+                >
+                  <Link
+                    to={`/customer/contacts/${contactId}?tab=${tab.key}`}
+                    className={`content-stretch flex items-start px-[25px] relative shrink-0 ${
+                      isActive
+                        ? "bg-[#333] py-[9px] shadow-[0px_2px_2px_0px_rgba(0,0,0,0.25)]"
+                        : "bg-[#333] py-[6px]"
+                    }`}
+                  >
+                    <p className={`font-['Roboto:Regular',sans-serif] leading-[normal] not-italic relative shrink-0 text-[13px] text-center tracking-[-0.5px] uppercase whitespace-nowrap ${
+                      isActive ? "text-white" : "text-[#ccc]"
+                    }`}>
+                      {tab.label}
+                    </p>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

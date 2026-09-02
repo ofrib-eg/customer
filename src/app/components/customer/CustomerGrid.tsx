@@ -4,12 +4,31 @@ import svgPathsMain from "@/imports/svg-16ystvll8u";
 import { FilterMenu } from "@/app/components/FilterMenu";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { Check, X } from "lucide-react";
+import { loadNewCustomers } from "./newCustomers";
+import { getStoreOrProfileLabel } from "./ChangeStoreAccessModal";
 
 export const mockCustomers = [
-  { 
-    id: 1, 
+  {
+    id: 12,
+    customerNumber: "0000000012",
+    extCustomerNumber: "738291045",
+    customerName: "EG Retail Trondheim",
+    customerType: "Business customer",
+    store: "1052",
+    address: "Skonnertvegen 8-10",
+    postalCode: "7053",
+    orgNumber: "968992600",
+    customerGroup: "Corporate",
+    inactive: false,
+    creditC: "",
+    creditBalance: "",
+    email: "post@egretailtrondheim.no",
+    phone: "+4773123456"
+  },
+  {
+    id: 1,
     customerNumber: "0000000001", 
-    extCustomerNumber: "4641-fee-6d31-fa17-...",
+    extCustomerNumber: "482103",
     customerName: "Hanna Hansen",
     customerType: "Private customer",
     store: "1050",
@@ -18,15 +37,15 @@ export const mockCustomers = [
     orgNumber: "",
     customerGroup: "",
     inactive: false,
-    creditC: "",
-    creditBalance: "",
+    creditC: "Yes",
+    creditBalance: "1000",
     email: "Ola.n@eg.no",
     phone: "+4792231501"
   },
   { 
     id: 2, 
     customerNumber: "0000000002", 
-    extCustomerNumber: "ORG-2024-001",
+    extCustomerNumber: "3910284",
     customerName: "Norsk Dagligvare AS",
     customerType: "Business customer",
     store: "1050",
@@ -43,7 +62,7 @@ export const mockCustomers = [
   { 
     id: 3, 
     customerNumber: "0000000003", 
-    extCustomerNumber: "ORG-2024-002",
+    extCustomerNumber: "82910473",
     customerName: "Bergen Handel AS",
     customerType: "Business customer",
     store: "1051",
@@ -60,7 +79,7 @@ export const mockCustomers = [
   { 
     id: 4, 
     customerNumber: "0000000004", 
-    extCustomerNumber: "467",
+    extCustomerNumber: "610284",
     customerName: "Kari Hansen",
     customerType: "Private customer",
     store: "1050",
@@ -77,7 +96,7 @@ export const mockCustomers = [
   { 
     id: 5, 
     customerNumber: "0000000005", 
-    extCustomerNumber: "468",
+    extCustomerNumber: "7402918",
     customerName: "Ola Granlie",
     customerType: "Private customer",
     store: "1050",
@@ -94,7 +113,7 @@ export const mockCustomers = [
   { 
     id: 6, 
     customerNumber: "0000000006", 
-    extCustomerNumber: "ORG-2024-003",
+    extCustomerNumber: "391847205",
     customerName: "Trondheim Engros AS",
     customerType: "Business customer",
     store: "1052",
@@ -111,7 +130,7 @@ export const mockCustomers = [
   { 
     id: 7, 
     customerNumber: "0000000007", 
-    extCustomerNumber: "3rd party customernumber",
+    extCustomerNumber: "528374",
     customerName: "Yngvild Granlie",
     customerType: "Private customer",
     store: "1",
@@ -128,7 +147,7 @@ export const mockCustomers = [
   { 
     id: 8, 
     customerNumber: "0000000008", 
-    extCustomerNumber: "ORG-2024-004",
+    extCustomerNumber: "84920173",
     customerName: "Stavanger Retail Group",
     customerType: "Business customer",
     store: "1053",
@@ -145,7 +164,7 @@ export const mockCustomers = [
   { 
     id: 9, 
     customerNumber: "0000000009", 
-    extCustomerNumber: "PRV-2024-001",
+    extCustomerNumber: "6031928",
     customerName: "Lars Olsen",
     customerType: "Private customer",
     store: "1050",
@@ -162,7 +181,7 @@ export const mockCustomers = [
   { 
     id: 10, 
     customerNumber: "0000000010", 
-    extCustomerNumber: "ORG-2024-005",
+    extCustomerNumber: "274839105",
     customerName: "Oslo Matservice AS",
     customerType: "Business customer",
     store: "1050",
@@ -179,7 +198,7 @@ export const mockCustomers = [
   { 
     id: 11, 
     customerNumber: "0000000011", 
-    extCustomerNumber: "PRV-2024-002",
+    extCustomerNumber: "583920",
     customerName: "Melina Andersson",
     customerType: "Private customer",
     store: "1050",
@@ -271,7 +290,7 @@ export function CustomerGrid() {
   }, []);
 
   const filteredData = useMemo(() => {
-    return mockCustomers
+    return [...mockCustomers, ...loadNewCustomers()]
       .filter((customer) => !deletedCustomerIds.has(customer.id)) // Filter out deleted customers
       .filter((customer) => {
         return Object.keys(filters).every((key) => {
@@ -477,6 +496,8 @@ export function CustomerGrid() {
                             </div>
                           ) : col.id === "customerNumber" ? (
                             <span className="truncate block text-[#1A1A1A] underline">{customer[col.id as keyof typeof customer]}</span>
+                          ) : col.id === "store" ? (
+                            <span className="truncate block">{getStoreOrProfileLabel(customer.store)}</span>
                           ) : (
                             <span className="truncate block">{customer[col.id as keyof typeof customer]}</span>
                           )}

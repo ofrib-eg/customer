@@ -1,27 +1,56 @@
 import React from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
-import imgCheckbox from "figma:asset/898d19ffff6bfdba80f8fefc8d425930bb2656d8.png";
+import { loadNewCustomers } from "./newCustomers";
 import { ContactPersonsGrid } from "./ContactPersonsGrid";
-import Frame1354 from "@/imports/Frame1354";
+import { SalesGrid } from "./SalesGrid";
+import { OffersGrid } from "./OffersGrid";
 import { DeactivateBusinessCustomerModal } from "./DeactivateBusinessCustomerModal";
 import { DeleteCustomerModal } from "./DeleteCustomerModal";
 import { DeactivatePrivateCustomerModal } from "./DeactivatePrivateCustomerModal";
 import { ReactivateOrganizationDialog } from "./ReactivateOrganizationDialog";
 import { OrganizationDeletedDialog } from "./OrganizationDeletedDialog";
 import { ChooseOrganizationModal } from "./ChooseOrganizationModal";
+import { EditContactModal, ContactFields } from "./EditContactModal";
+import { EditAddressModal, AddressFields } from "./EditAddressModal";
+import { ChangeStoreAccessModal, StoreAccessValue, getStoreOrProfileLabel } from "./ChangeStoreAccessModal";
+import { ChangeCustomerNameModal } from "./ChangeCustomerNameModal";
+import { ManualPaymentModal } from "./ManualPaymentModal";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion as Motion, AnimatePresence } from "motion/react";
-import { Check, X, Link as LinkIcon } from "lucide-react";
+import { Check, X, Link as LinkIcon, MoreHorizontal, Info, Pencil, Plus } from "lucide-react";
 import { Card, CardContent } from "@/app/components/ui/card";
+import { DETAIL_CARD_CLASS, SectionHeader, FieldLabel, InputField, SelectField, ReadOnlyField, CheckboxField, DateField } from "./sharedFields";
 
-const DETAIL_CARD_CLASS = "shadow-none";
+type BusinessAddressType = "general" | "delivery" | "invoice";
+
+interface CustomerCardInfo {
+  cardId: string;
+  startDate: string;
+  externalCardId: string;
+  expireDate: string;
+  status: string;
+}
+
+const BUSINESS_ADDRESS_TITLES: Record<BusinessAddressType, string> = {
+  general: "Address",
+  delivery: "Delivery address",
+  invoice: "Invoice address"
+};
+
+const ORG_TYPE_OPTIONS = [
+  { value: "Parent", label: "Parent" },
+  { value: "Subsidiary", label: "Subsidiary" },
+  { value: "Branch", label: "Branch" }
+];
 
 // Mock data import (we'll need to get this from the grid component)
 const mockCustomers = [
   { 
     id: 1, 
     customerNumber: "0000000001", 
-    extCustomerNumber: "4641-fee-6d31-fa17-...",
+    extCustomerNumber: "482103",
     customerName: "Hanna Hansen",
+    customerSince: "2021-03-14",
     customerType: "Private customer",
     store: "1050",
     address: "Fjellveien 2",
@@ -29,16 +58,25 @@ const mockCustomers = [
     orgNumber: "",
     customerGroup: "",
     inactive: false,
-    creditC: "",
-    creditBalance: "",
+    creditC: "Yes",
+    creditBalance: "1000",
+    balanceDueDate: "2028-10-31",
+    customerCard: {
+      cardId: "0000012",
+      startDate: "2026-01-12",
+      externalCardId: "00000000115",
+      expireDate: "2030-02-15",
+      status: "Active"
+    },
     email: "Ola.n@eg.no",
     phone: "+4792231501"
   },
-  { 
-    id: 2, 
-    customerNumber: "0000000002", 
-    extCustomerNumber: "ORG-2024-001",
+  {
+    id: 2,
+    customerNumber: "0000000002",
+    extCustomerNumber: "3910284",
     customerName: "Norsk Dagligvare AS",
+    customerSince: "2019-06-01",
     customerType: "Business customer",
     store: "1050",
     address: "Storgata 15",
@@ -49,13 +87,20 @@ const mockCustomers = [
     creditC: "A",
     creditBalance: "50000",
     email: "post@norskdagligvare.no",
-    phone: "+4722334455"
+    phone: "+4722334455",
+    source: "Internal",
+    organizationType: "Branch",
+    branchNumber: "1234567",
+    addresses: [
+      { type: "Address", addressLine1: "Storgata 15", addressLine2: "", postalCode: "0155", city: "Oslo", country: "Norway" }
+    ]
   },
-  { 
-    id: 3, 
-    customerNumber: "0000000003", 
-    extCustomerNumber: "ORG-2024-002",
+  {
+    id: 3,
+    customerNumber: "0000000003",
+    extCustomerNumber: "82910473",
     customerName: "Bergen Handel AS",
+    customerSince: "2022-11-08",
     customerType: "Business customer",
     store: "1051",
     address: "Bryggen 22",
@@ -63,16 +108,26 @@ const mockCustomers = [
     orgNumber: "987654321",
     customerGroup: "Corporate",
     inactive: false,
-    creditC: "B",
-    creditBalance: "25000",
+    creditC: "",
+    creditBalance: "",
     email: "kontor@bergenhandel.no",
-    phone: "+4755667788"
+    phone: "+4755667788",
+    source: "External",
+    organizationType: "Branch",
+    branchNumber: "9876543",
+    dunsNumber: "9876543",
+    addresses: [
+      { type: "Address", addressLine1: "Bryggen 22", addressLine2: "", postalCode: "5003", city: "Bergen", country: "Norway" },
+      { type: "Delivery address", addressLine1: "Bontelabo 2", addressLine2: "", postalCode: "5003", city: "Bergen", country: "Norway" },
+      { type: "Invoice address", addressLine1: "Postboks 100", addressLine2: "", postalCode: "5001", city: "Bergen", country: "Norway" }
+    ]
   },
   { 
     id: 4, 
     customerNumber: "0000000004", 
-    extCustomerNumber: "467",
+    extCustomerNumber: "610284",
     customerName: "Kari Hansen",
+    customerSince: "2023-02-20",
     customerType: "Private customer",
     store: "1050",
     address: "Fjellveien 2",
@@ -88,8 +143,9 @@ const mockCustomers = [
   { 
     id: 5, 
     customerNumber: "0000000005", 
-    extCustomerNumber: "468",
+    extCustomerNumber: "7402918",
     customerName: "Ola Granlie",
+    customerSince: "2020-09-05",
     customerType: "Private customer",
     store: "1050",
     address: "Fjellveien 3",
@@ -105,8 +161,9 @@ const mockCustomers = [
   { 
     id: 6, 
     customerNumber: "0000000006", 
-    extCustomerNumber: "ORG-2024-003",
+    extCustomerNumber: "391847205",
     customerName: "Trondheim Engros AS",
+    customerSince: "2018-01-15",
     customerType: "Business customer",
     store: "1052",
     address: "Innherredsveien 55",
@@ -117,13 +174,20 @@ const mockCustomers = [
     creditC: "A",
     creditBalance: "75000",
     email: "salg@trondheimengros.no",
-    phone: "+4773889900"
+    phone: "+4773889900",
+    source: "Internal",
+    organizationType: "Branch",
+    branchNumber: "5556667",
+    addresses: [
+      { type: "Address", addressLine1: "Innherredsveien 55", addressLine2: "", postalCode: "7014", city: "Trondheim", country: "Norway" }
+    ]
   },
   { 
     id: 7, 
     customerNumber: "0000000007", 
-    extCustomerNumber: "3rd party customernumber",
+    extCustomerNumber: "528374",
     customerName: "Yngvild Granlie",
+    customerSince: "2024-04-10",
     customerType: "Private customer",
     store: "1",
     address: "",
@@ -139,8 +203,9 @@ const mockCustomers = [
   { 
     id: 8, 
     customerNumber: "0000000008", 
-    extCustomerNumber: "ORG-2024-004",
+    extCustomerNumber: "84920173",
     customerName: "Stavanger Retail Group",
+    customerSince: "2021-07-22",
     customerType: "Business customer",
     store: "1053",
     address: "Madlaveien 102",
@@ -151,13 +216,20 @@ const mockCustomers = [
     creditC: "B",
     creditBalance: "30000",
     email: "info@stavangerretail.no",
-    phone: "+4751223344"
+    phone: "+4751223344",
+    source: "Internal",
+    organizationType: "Branch",
+    branchNumber: "4443332",
+    addresses: [
+      { type: "Address", addressLine1: "Madlaveien 102", addressLine2: "", postalCode: "4042", city: "Stavanger", country: "Norway" }
+    ]
   },
   { 
     id: 9, 
     customerNumber: "0000000009", 
-    extCustomerNumber: "PRV-2024-001",
+    extCustomerNumber: "6031928",
     customerName: "Lars Olsen",
+    customerSince: "2022-05-30",
     customerType: "Private customer",
     store: "1050",
     address: "Kirkegata 8",
@@ -173,8 +245,9 @@ const mockCustomers = [
   { 
     id: 10, 
     customerNumber: "0000000010", 
-    extCustomerNumber: "ORG-2024-005",
+    extCustomerNumber: "274839105",
     customerName: "Oslo Matservice AS",
+    customerSince: "2019-10-11",
     customerType: "Business customer",
     store: "1050",
     address: "Økernveien 94",
@@ -185,13 +258,20 @@ const mockCustomers = [
     creditC: "A",
     creditBalance: "100000",
     email: "post@oslomatservice.no",
-    phone: "+4722998877"
+    phone: "+4722998877",
+    source: "Internal",
+    organizationType: "Branch",
+    branchNumber: "1112223",
+    addresses: [
+      { type: "Address", addressLine1: "Økernveien 94", addressLine2: "", postalCode: "0579", city: "Oslo", country: "Norway" }
+    ]
   },
   { 
     id: 11, 
     customerNumber: "0000000011", 
-    extCustomerNumber: "PRV-2024-002",
+    extCustomerNumber: "583920",
     customerName: "Melina Andersson",
+    customerSince: "2023-08-01",
     customerType: "Private customer",
     store: "1050",
     address: "Solgata 45",
@@ -203,165 +283,68 @@ const mockCustomers = [
     creditBalance: "",
     email: "melina.andersson@email.no",
     phone: "+4798123456"
+  },
+  {
+    id: 12,
+    customerNumber: "0000000012",
+    extCustomerNumber: "738291045",
+    customerName: "EG Retail Trondheim",
+    customerSince: "2025-01-05",
+    customerType: "Business customer",
+    store: "1052",
+    address: "Skonnertvegen 8-10",
+    postalCode: "7053",
+    orgNumber: "968992600",
+    customerGroup: "Corporate",
+    inactive: false,
+    creditC: "",
+    creditBalance: "",
+    email: "post@egretailtrondheim.no",
+    phone: "+4773123456",
+    source: "Internal",
+    organizationType: "Branch",
+    branchNumber: "9689926",
+    organizationRegisterId: 9,
+    addresses: [
+      { type: "Address", addressLine1: "Skonnertvegen 8-10", addressLine2: "", postalCode: "7053", city: "Trondheim", country: "Norway" },
+      { type: "Invoice address", addressLine1: "Skonnertvegen 10", addressLine2: "", postalCode: "7053", city: "Trondheim", country: "Norway" }
+    ]
   }
 ];
 
-function SectionHeader({ children, variant = "default", icon }: { children: React.ReactNode; variant?: "default" | "address"; icon?: React.ReactNode }) {
-  const textClassName = variant === "address"
-    ? "font-['Roboto_Condensed',sans-serif] font-normal text-[14px] leading-[17px] tracking-[0px] text-[#1a1a1a] uppercase"
-    : "font-['Roboto_Condensed',sans-serif] font-bold text-[16px] leading-[19px] tracking-[0px] text-[#1a1a1a] uppercase";
-  return (
-    <div className="flex items-center gap-[6px] mb-[10px]">
-      <h3 className={textClassName}>{children}</h3>
-      {icon}
-    </div>
-  );
-}
+const EXAMPLE_CUSTOMER_NOTES: Record<number, string> = {
+  1: "Prefers contact via SMS. Allergic to nuts - flagged for bakery counter staff.",
+  2: "",
+  3: "External data source (D&B) - do not edit organization details manually.",
+  4: "Requested loyalty card replacement on 2024-11-02, issued new card same day.",
+  5: "",
+  6: "Large volume orders - always confirm delivery slot with warehouse before dispatch.",
+  7: "",
+  8: "",
+  9: "Has requested to be contacted only by email, not phone.",
+  10: "Ongoing dispute regarding invoice #4021 - escalated to finance team 2024-09-15. Customer expects a written apology and partial credit note before continuing further orders. Do not close this note until finance confirms the case is fully resolved and the credit note has been issued.",
+  11: "VIP customer, active in loyalty program 'EG Trondheim'. Handle with priority.",
+  12: ""
+};
 
-function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
-  return (
-    <label className="block font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#666] mb-[2px]">
-      {required && "* "}{children}
-    </label>
-  );
-}
+const NOTES_MAX_HEIGHT = 320;
 
-function InputField({ label, value, required, disabled }: { label: string; value: string; required?: boolean; disabled?: boolean }) {
-  return (
-    <div className="mb-[10px]">
-      <FieldLabel required={required}>{label}</FieldLabel>
-      <div className="bg-white h-[32px] relative">
-        <div className="overflow-clip relative rounded-[inherit] size-full">
-          <input 
-            type="text"
-            defaultValue={value}
-            disabled={disabled}
-            className="absolute font-['Roboto:Regular',sans-serif] inset-[8px_10px_7px_10px] leading-[normal] not-italic text-[#1a1a1a] text-[14px] bg-transparent border-none outline-none w-full disabled:text-[#999]"
-          />
-        </div>
-        <div aria-hidden="true" className={`absolute border border-solid inset-0 pointer-events-none ${disabled ? 'border-[#e0e0e0]' : 'border-[#ccc]'}`} />
-      </div>
-    </div>
-  );
-}
-
-function SelectField({ label, value, options, required }: { label: string; value: string; options: { value: string; label: string }[]; required?: boolean }) {
-  return (
-    <div className="mb-[10px]">
-      <FieldLabel required={required}>{label}</FieldLabel>
-      <div className="bg-white h-[32px] relative">
-        <div className="overflow-clip relative rounded-[inherit] size-full">
-          <select 
-            defaultValue={value}
-            className="absolute font-['Roboto:Regular',sans-serif] inset-[8px_29px_7px_10px] leading-[normal] not-italic text-[#1a1a1a] text-[14px] bg-transparent border-none outline-none w-full appearance-none cursor-pointer"
-          >
-            <option value="">Select...</option>
-            {options.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <div className="-translate-y-1/2 absolute right-[6px] size-[20px] top-1/2">
-            <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
-              <g>
-                <mask height="4" id="mask0_select" maskUnits="userSpaceOnUse" style={{ maskType: "alpha" }} width="8" x="6" y="8">
-                  <path d="M14 8L10 12L6 8H14Z" fill="var(--fill-0, #666666)" />
-                </mask>
-                <g mask="url(#mask0_select)">
-                  <rect fill="var(--fill-0, #666666)" height="20" width="20" />
-                </g>
-              </g>
-            </svg>
-          </div>
-        </div>
-        <div aria-hidden="true" className="absolute border border-[#ccc] border-solid inset-0 pointer-events-none" />
-      </div>
-    </div>
-  );
-}
-
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-[10px]">
-      <FieldLabel>{label}</FieldLabel>
-      <div className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] py-[2px]">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function CheckboxField({ label, checked }: { label: string; checked: boolean }) {
-  return (
-    <label className="flex items-center gap-[8px] mb-[10px] cursor-pointer">
-      <input 
-        type="checkbox" 
-        defaultChecked={checked}
-        className="w-[16px] h-[16px] cursor-pointer"
-      />
-      <span className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
-        {label}
-      </span>
-    </label>
-  );
-}
-
-function AddressSection({ title, inheritChecked, isInactive }: { title: string; inheritChecked: boolean; isInactive?: boolean }) {
-  const [inherit, setInherit] = React.useState(inheritChecked);
-
+function AddressSection({ title, fields, onEdit }: { title: string; fields: AddressFields; onEdit: () => void }) {
   return (
     <div className="flex-1 min-w-[200px]">
-      <SectionHeader variant="address">{title}</SectionHeader>
-      <label 
-        className={`content-stretch flex gap-[10px] items-start pb-[15px] pt-[5px] relative ${isInactive ? 'cursor-default' : 'cursor-pointer'}`}
-        onClick={() => !isInactive && setInherit(!inherit)}
-      >
-        <div className="h-[17px] relative shrink-0 w-[16px]">
-          <div className="absolute left-[-2px] mix-blend-multiply size-[20px] top-[-2px]">
-            <div className="absolute inset-0 mix-blend-multiply">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <img 
-                  alt="" 
-                  className="absolute h-[135%] left-[-15%] max-w-none top-[-20%] w-[125%]" 
-                  src={imgCheckbox}
-                  style={{ opacity: inherit ? 1 : 0.3 }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        <p className="flex-[1_0_0] font-['Roboto:Regular',sans-serif] leading-[normal] min-h-px min-w-px not-italic relative text-[#1a1a1a] text-[14px] whitespace-pre-wrap">
-          Inherit from organization
-        </p>
-      </label>
-      
-      {/* Always show read-only fields when inactive */}
-      {isInactive || inherit ? (
-        <>
-          <ReadOnlyField label="Address line 1" value="Fredsgatan 33" />
-          <ReadOnlyField label="Address line 2" value="" />
-          <ReadOnlyField label="Postal code" value="413 03" />
-          <ReadOnlyField label="City" value="Göteborg" />
-          <ReadOnlyField label="Country" value="Sweden" />
-        </>
-      ) : (
-        <>
-          <InputField label="Address line 1" value="Fredsgatan 3" />
-          <InputField label="Address line 2" value="" />
-          <InputField label="Postal code" value="413 03" />
-          <InputField label="City" value="Göteborg" required />
-          <SelectField 
-            label="Country" 
-            value="Sweden"
-            required
-            options={[
-              { value: "Sweden", label: "Sweden" },
-              { value: "Norway", label: "Norway" },
-              { value: "Denmark", label: "Denmark" },
-              { value: "Finland", label: "Finland" }
-            ]}
-          />
-        </>
-      )}
+      <div className="flex items-center justify-between mb-[10px]">
+        <SectionHeader className="">{title}</SectionHeader>
+        <button type="button" onClick={onEdit} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label={`Edit ${title.toLowerCase()}`}>
+          <Pencil className="size-[16px]" />
+        </button>
+      </div>
+
+      {/* Address is edited via modal, matching the private customer contact card pattern */}
+      <ReadOnlyField compact hideIfEmpty label="Address line 1" value={fields.addressLine1} />
+      <ReadOnlyField compact hideIfEmpty label="Address line 2" value={fields.addressLine2} />
+      <ReadOnlyField compact hideIfEmpty label="Postal code" value={fields.postalCode} />
+      <ReadOnlyField compact hideIfEmpty label="City" value={fields.city} />
+      <ReadOnlyField compact hideIfEmpty label="Country" value={fields.country} />
     </div>
   );
 }
@@ -371,6 +354,14 @@ export function CustomerDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isInactive, setIsInactive] = React.useState(false);
+  const [creditCustomerDraft, setCreditCustomerDraft] = React.useState(false);
+  const [customerCard, setCustomerCard] = React.useState<CustomerCardInfo | null>(null);
+  const [creditLimit, setCreditLimit] = React.useState("0");
+  const [creditBalance, setCreditBalance] = React.useState("0");
+  const [referenceNumberRequired, setReferenceNumberRequired] = React.useState(false);
+  const [creditLocked, setCreditLocked] = React.useState(false);
+  const [balanceDueDate, setBalanceDueDate] = React.useState("");
+  const [isManualPaymentModalOpen, setIsManualPaymentModalOpen] = React.useState(false);
   const [deactivationReason, setDeactivationReason] = React.useState("");
   const [isDeactivateModalOpen, setIsDeactivateModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -381,13 +372,86 @@ export function CustomerDetail() {
   const [isReactivateOrgDialogOpen, setIsReactivateOrgDialogOpen] = React.useState(false);
   const [isOrgDeletedDialogOpen, setIsOrgDeletedDialogOpen] = React.useState(false);
   const [isChooseOrgModalOpen, setIsChooseOrgModalOpen] = React.useState(false);
-  
+  const [isEditingOrgIdentity, setIsEditingOrgIdentity] = React.useState(false);
+  const [customerNotes, setCustomerNotes] = React.useState("");
+  const [orgNameDraft, setOrgNameDraft] = React.useState("");
+  const [orgNumberDraft, setOrgNumberDraft] = React.useState("");
+  const [orgTypeDraft, setOrgTypeDraft] = React.useState("Branch");
+  const [orgBranchNumberDraft, setOrgBranchNumberDraft] = React.useState("");
+  const [isEditContactModalOpen, setIsEditContactModalOpen] = React.useState(false);
+  const [contactFields, setContactFields] = React.useState<ContactFields>({
+    firstName: "",
+    lastName: "",
+    birthDate: "",
+    gender: "",
+    email: "",
+    mobileNumber: "",
+    ssn: "",
+    loyaltyProgramName: "",
+    extIdentityNumber: ""
+  });
+  const [isEditAddressModalOpen, setIsEditAddressModalOpen] = React.useState(false);
+  const [addressFields, setAddressFields] = React.useState<AddressFields>({
+    addressLine1: "",
+    addressLine2: "",
+    postalCode: "",
+    city: "",
+    country: ""
+  });
+  const [isChangeStoreAccessModalOpen, setIsChangeStoreAccessModalOpen] = React.useState(false);
+  const [isChangeCustomerNameModalOpen, setIsChangeCustomerNameModalOpen] = React.useState(false);
+  const [customerNameOverride, setCustomerNameOverride] = React.useState("");
+  const [isContactsExpanded, setIsContactsExpanded] = React.useState(false);
+  const [contactsExpandStyle, setContactsExpandStyle] = React.useState<React.CSSProperties>({});
+  const contactsScrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const contactsWrapperRef = React.useRef<HTMLDivElement>(null);
+  const contactsNaturalLeftRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (!isContactsExpanded) {
+      contactsNaturalLeftRef.current = null;
+      setContactsExpandStyle({});
+      return;
+    }
+
+    const measure = () => {
+      const container = contactsScrollContainerRef.current;
+      const wrapper = contactsWrapperRef.current;
+      if (!container || !wrapper) return;
+      if (contactsNaturalLeftRef.current === null) {
+        contactsNaturalLeftRef.current = wrapper.getBoundingClientRect().left;
+      }
+      const containerRect = container.getBoundingClientRect();
+      const margin = 30;
+      const width = containerRect.width - margin * 2;
+      const left = containerRect.left + margin - contactsNaturalLeftRef.current;
+      setContactsExpandStyle({ position: "relative", left: `${left}px`, width: `${width}px` });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [isContactsExpanded]);
+  const [storeAccess, setStoreAccess] = React.useState<StoreAccessValue>({
+    type: "all",
+    profileId: "",
+    teamId: "",
+    storeIds: []
+  });
+  const emptyAddress: AddressFields = { addressLine1: "", addressLine2: "", postalCode: "", city: "", country: "" };
+  const [businessAddresses, setBusinessAddresses] = React.useState<Record<BusinessAddressType, AddressFields>>({
+    general: emptyAddress,
+    delivery: emptyAddress,
+    invoice: emptyAddress
+  });
+  const [editingAddressType, setEditingAddressType] = React.useState<BusinessAddressType | null>(null);
+
   // Parse URL search params manually
   const searchParams = new URLSearchParams(location.search);
-  const activeTab = searchParams.get("tab") || "contact";
+  const activeTab = searchParams.get("tab") || "details";
   
   const customerId = id ? parseInt(id) : 0;
-  const customer = mockCustomers.find(c => c.id === customerId);
+  const customer = [...mockCustomers, ...loadNewCustomers()].find(c => c.id === customerId);
   
   if (!customer) {
     return <div className="p-[20px]">Customer not found</div>;
@@ -406,8 +470,208 @@ export function CustomerDetail() {
       setIsInactive(customer.inactive);
     }
   }, [customer.inactive, customer.id]);
+
+  // Initialize the credit customer checkbox and credit fields from customer data,
+  // falling back to any previously persisted values so the choice survives a page reload
+  React.useEffect(() => {
+    const stored = localStorage.getItem('creditCustomers');
+    const creditCustomers = stored ? JSON.parse(stored) : {};
+    const saved = customer.id in creditCustomers ? creditCustomers[customer.id] : !!customer.creditC;
+    setCreditCustomerDraft(saved);
+
+    const storedCustomerCards = localStorage.getItem('customerCardsIssued');
+    const customerCardsIssued = storedCustomerCards ? JSON.parse(storedCustomerCards) : {};
+    const issuedCard = customerCardsIssued[customer.id];
+    if (issuedCard && typeof issuedCard === 'object') {
+      setCustomerCard(issuedCard);
+    } else if ((customer as any).customerCard) {
+      setCustomerCard((customer as any).customerCard);
+    } else {
+      setCustomerCard(null);
+    }
+
+    const storedFields = localStorage.getItem('creditFields');
+    const creditFields = storedFields ? JSON.parse(storedFields) : {};
+    const fields = creditFields[customer.id];
+    if (fields) {
+      setCreditLimit(fields.creditLimit);
+      setCreditBalance(fields.creditBalance);
+      setReferenceNumberRequired(fields.referenceNumberRequired);
+      setCreditLocked(fields.creditLocked);
+      setBalanceDueDate(fields.balanceDueDate);
+    } else {
+      setCreditLimit(customer.creditBalance || "0");
+      setCreditBalance("0");
+      setReferenceNumberRequired(false);
+      setCreditLocked(false);
+      setBalanceDueDate((customer as any).balanceDueDate || "");
+    }
+  }, [customer.creditC, customer.creditBalance, customer.id]);
+
+  // Initialize the contact fields (private customers), falling back to any
+  // previously persisted values so edits survive a page reload
+  React.useEffect(() => {
+    const stored = localStorage.getItem('contactFields');
+    const allContactFields = stored ? JSON.parse(stored) : {};
+    const saved = allContactFields[customer.id];
+    if (saved) {
+      setContactFields(saved);
+    } else {
+      const [firstName, ...rest] = customer.customerName.split(" ");
+      setContactFields({
+        firstName,
+        lastName: rest.join(" "),
+        birthDate: "1995-01-01",
+        gender: "Female",
+        email: customer.email,
+        mobileNumber: customer.phone,
+        ssn: "199501012223",
+        loyaltyProgramName: "EG Trondheim",
+        extIdentityNumber: "19029871"
+      });
+    }
+  }, [customer.id, customer.customerName, customer.email, customer.phone]);
+
+  const handleSaveContact = (fields: ContactFields) => {
+    setContactFields(fields);
+    const stored = localStorage.getItem('contactFields');
+    const allContactFields = stored ? JSON.parse(stored) : {};
+    allContactFields[customer.id] = fields;
+    localStorage.setItem('contactFields', JSON.stringify(allContactFields));
+  };
+
+  // Initialize the address fields (private customers), falling back to any
+  // previously persisted values so edits survive a page reload
+  React.useEffect(() => {
+    const stored = localStorage.getItem('addressFields');
+    const allAddressFields = stored ? JSON.parse(stored) : {};
+    const saved = allAddressFields[customer.id];
+    if (saved) {
+      setAddressFields(saved);
+    } else {
+      setAddressFields({
+        addressLine1: customer.address || "",
+        addressLine2: "",
+        postalCode: customer.postalCode || "",
+        city: "Göteborg",
+        country: "Sweden"
+      });
+    }
+  }, [customer.id, customer.address, customer.postalCode]);
+
+  const handleSaveAddress = (fields: AddressFields) => {
+    setAddressFields(fields);
+    const stored = localStorage.getItem('addressFields');
+    const allAddressFields = stored ? JSON.parse(stored) : {};
+    allAddressFields[customer.id] = fields;
+    localStorage.setItem('addressFields', JSON.stringify(allAddressFields));
+  };
+
+  // Initialize the business customer's 3 addresses (shared with the organisation),
+  // falling back to any previously persisted values so edits survive a page reload
+  React.useEffect(() => {
+    const stored = localStorage.getItem('businessAddresses');
+    const allBusinessAddresses = stored ? JSON.parse(stored) : {};
+    const saved = allBusinessAddresses[customer.id];
+    if (saved) {
+      setBusinessAddresses(saved);
+    } else {
+      const findAddress = (type: string): AddressFields => {
+        const match = ((customer as any).addresses || []).find((a: any) => a.type === type);
+        return match
+          ? { addressLine1: match.addressLine1, addressLine2: match.addressLine2 || "", postalCode: match.postalCode, city: match.city, country: match.country }
+          : emptyAddress;
+      };
+      const general = findAddress("Address");
+      setBusinessAddresses({
+        general: general.addressLine1 ? general : { addressLine1: customer.address || "", addressLine2: "", postalCode: customer.postalCode || "", city: "", country: "" },
+        delivery: findAddress("Delivery address"),
+        invoice: findAddress("Invoice address")
+      });
+    }
+  }, [customer.id]);
+
+  const handleSaveBusinessAddress = (type: BusinessAddressType, fields: AddressFields) => {
+    setBusinessAddresses((prev) => {
+      const next = { ...prev, [type]: fields };
+      const stored = localStorage.getItem('businessAddresses');
+      const allBusinessAddresses = stored ? JSON.parse(stored) : {};
+      allBusinessAddresses[customer.id] = next;
+      localStorage.setItem('businessAddresses', JSON.stringify(allBusinessAddresses));
+      return next;
+    });
+  };
+
+  // Initialize store access, falling back to any previously persisted value
+  React.useEffect(() => {
+    const stored = localStorage.getItem('storeAccess');
+    const allStoreAccess = stored ? JSON.parse(stored) : {};
+    const saved = allStoreAccess[customer.id];
+    setStoreAccess(saved || { type: "all", profileId: "", teamId: "", storeIds: [] });
+  }, [customer.id]);
+
+  const handleSaveStoreAccess = (value: StoreAccessValue) => {
+    setStoreAccess(value);
+    const stored = localStorage.getItem('storeAccess');
+    const allStoreAccess = stored ? JSON.parse(stored) : {};
+    allStoreAccess[customer.id] = value;
+    localStorage.setItem('storeAccess', JSON.stringify(allStoreAccess));
+  };
+
+  // Initialize the customer name override, falling back to any previously persisted value
+  React.useEffect(() => {
+    const stored = localStorage.getItem('customerNameOverrides');
+    const allOverrides = stored ? JSON.parse(stored) : {};
+    setCustomerNameOverride(allOverrides[customer.id] || "");
+  }, [customer.id]);
+
+  const handleSaveCustomerName = (name: string) => {
+    setCustomerNameOverride(name);
+    const stored = localStorage.getItem('customerNameOverrides');
+    const allOverrides = stored ? JSON.parse(stored) : {};
+    allOverrides[customer.id] = name;
+    localStorage.setItem('customerNameOverrides', JSON.stringify(allOverrides));
+  };
+
+  const displayCustomerName = customerNameOverride || customer.customerName;
+
+  // Initialize customer notes, falling back to any previously persisted value
+  React.useEffect(() => {
+    const stored = localStorage.getItem('customerNotes');
+    const allNotes = stored ? JSON.parse(stored) : {};
+    const saved = allNotes[customer.id];
+    setCustomerNotes(saved !== undefined ? saved : EXAMPLE_CUSTOMER_NOTES[customer.id] ?? "");
+  }, [customer.id]);
+
+  // Auto-grow the notes textarea to fit its content, up to a max height, then scroll internally
+  const notesTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  React.useEffect(() => {
+    const el = notesTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, NOTES_MAX_HEIGHT)}px`;
+  }, [customerNotes]);
+
+  // When a customer who wasn't already a credit customer gets the checkbox ticked,
+  // reset the credit fields to their defaults instead of showing stale data
+  const handleCreditCustomerToggle = (checked: boolean) => {
+    setCreditCustomerDraft(checked);
+    if (checked) {
+      const stored = localStorage.getItem('creditFields');
+      const creditFields = stored ? JSON.parse(stored) : {};
+      const hasExistingCreditData = customer.id in creditFields || !!customer.creditC;
+      if (!hasExistingCreditData) {
+        setCreditLimit("0");
+        setCreditBalance("0");
+        setReferenceNumberRequired(false);
+        setCreditLocked(false);
+        setBalanceDueDate("");
+      }
+    }
+  };
   
   const isBusinessCustomer = customer.customerType === "Business customer";
+  const isExternalOrg = (customer as any).source === "External";
 
   // Mock data for sole customer check and transactions
   const isSoleCustomer = true; // Would come from API
@@ -490,6 +754,34 @@ export function CustomerDetail() {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
+  };
+
+  const handleAddCustomerCard = () => {
+    const today = new Date();
+    const expireDate = new Date(today);
+    expireDate.setFullYear(expireDate.getFullYear() + 4);
+    const newCard: CustomerCardInfo = {
+      cardId: String(customer.id).padStart(7, "0"),
+      startDate: today.toISOString().slice(0, 10),
+      externalCardId: String(Math.floor(1e10 + Math.random() * 9e10)),
+      expireDate: expireDate.toISOString().slice(0, 10),
+      status: "Active"
+    };
+    setCustomerCard(newCard);
+    const stored = localStorage.getItem('customerCardsIssued');
+    const customerCardsIssued = stored ? JSON.parse(stored) : {};
+    customerCardsIssued[customer.id] = newCard;
+    localStorage.setItem('customerCardsIssued', JSON.stringify(customerCardsIssued));
+  };
+
+  const handleInactivateCustomerCard = () => {
+    if (!customerCard) return;
+    const updatedCard: CustomerCardInfo = { ...customerCard, status: "Inactive" };
+    setCustomerCard(updatedCard);
+    const stored = localStorage.getItem('customerCardsIssued');
+    const customerCardsIssued = stored ? JSON.parse(stored) : {};
+    customerCardsIssued[customer.id] = updatedCard;
+    localStorage.setItem('customerCardsIssued', JSON.stringify(customerCardsIssued));
   };
 
   const handleConfirmDelete = () => {
@@ -619,8 +911,45 @@ export function CustomerDetail() {
     activateCustomerOnly();
   };
 
+  const persistCreditFields = (overrides: Record<string, unknown>) => {
+    const stored = localStorage.getItem('creditFields');
+    const creditFields = stored ? JSON.parse(stored) : {};
+    creditFields[customer.id] = {
+      creditLimit,
+      creditBalance,
+      referenceNumberRequired,
+      creditLocked,
+      balanceDueDate,
+      ...overrides
+    };
+    localStorage.setItem('creditFields', JSON.stringify(creditFields));
+  };
+
+  const handleManualPayment = (amount: string, comment: string) => {
+    const newBalance = Math.max(0, Number(creditBalance || "0") - Number(amount)).toString();
+    setCreditBalance(newBalance);
+    persistCreditFields({ creditBalance: newBalance });
+    console.log("Manual payment registered", { amount, comment });
+  };
+
   const handleSave = () => {
     console.log("Saving customer...");
+
+    // Persist the credit customer choice and its fields (simulates saving to the database)
+    const stored = localStorage.getItem('creditCustomers');
+    const creditCustomers = stored ? JSON.parse(stored) : {};
+    creditCustomers[customer.id] = creditCustomerDraft;
+    localStorage.setItem('creditCustomers', JSON.stringify(creditCustomers));
+
+    const storedFields = localStorage.getItem('creditFields');
+    const creditFields = storedFields ? JSON.parse(storedFields) : {};
+    creditFields[customer.id] = { creditLimit, creditBalance, referenceNumberRequired, creditLocked, balanceDueDate };
+    localStorage.setItem('creditFields', JSON.stringify(creditFields));
+
+    const storedNotes = localStorage.getItem('customerNotes');
+    const allNotes = storedNotes ? JSON.parse(storedNotes) : {};
+    allNotes[customer.id] = customerNotes;
+    localStorage.setItem('customerNotes', JSON.stringify(allNotes));
   };
 
   // Expose customer status and handlers globally so Footer can access them
@@ -631,9 +960,12 @@ export function CustomerDetail() {
     (window as any).deactivateCustomer = handleDeactivate;
     (window as any).activateCustomer = handleActivate;
     (window as any).deleteCustomer = handleDelete;
-    (window as any).customerName = customer.customerName;
+    (window as any).saveCustomer = handleSave;
+    (window as any).customerName = displayCustomerName;
     (window as any).customerType = customer.customerType;
-    
+    (window as any).hasCustomerCard = !!customerCard;
+    (window as any).addCustomerCard = handleAddCustomerCard;
+
     return () => {
       delete (window as any).isCustomerInactive;
       delete (window as any).isBusinessCustomer;
@@ -641,10 +973,13 @@ export function CustomerDetail() {
       delete (window as any).deactivateCustomer;
       delete (window as any).activateCustomer;
       delete (window as any).deleteCustomer;
+      delete (window as any).saveCustomer;
       delete (window as any).customerName;
       delete (window as any).customerType;
+      delete (window as any).hasCustomerCard;
+      delete (window as any).addCustomerCard;
     };
-  }, [isInactive, isBusinessCustomer, canDelete, customer.customerName, customer.customerType]);
+  }, [isInactive, isBusinessCustomer, canDelete, customer.customerName, customerNameOverride, customer.customerType, creditCustomerDraft, creditLimit, creditBalance, referenceNumberRequired, creditLocked, balanceDueDate, customerCard]);
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(location.search);
@@ -654,65 +989,359 @@ export function CustomerDetail() {
 
   // For private customers, use the Figma imported design
   if (!isBusinessCustomer) {
+    const privateTabLabels: Record<string, string> = {
+      sales: "Sales",
+      offers: "Offers",
+      "customer-orders": "Customer orders"
+    };
+
     return (
       <>
-        <div className="flex flex-col h-full bg-white overflow-auto">
-          {activeTab === "details" ? (
-            // Details Tab Content
+        <div className="flex flex-col h-full bg-[#F4F5F6] overflow-auto">
+          {activeTab === "sales" ? (
+            <SalesGrid />
+          ) : activeTab === "offers" ? (
+            <OffersGrid />
+          ) : activeTab !== "details" ? (
+            // Customer orders (placeholder) - same tab set as business customers
             <div className="p-[20px] flex-1 overflow-auto">
-              <div className="flex gap-[60px]">
-                {/* DETAILS Section */}
-                <div className="flex-1 max-w-[200px]">
-                  <SectionHeader>Details</SectionHeader>
-                  <ReadOnlyField label="Customer type" value={customer.customerType} />
-                  <ReadOnlyField label="Customer number" value={customer.customerNumber} />
-                  <ReadOnlyField label="Customer status" value={isInactive ? "Inactive" : "Active"} />
-                  {isInactive && deactivationReason && (
-                    <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
-                  )}
-                  <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
-                  <ReadOnlyField label="Store" value={customer.store} />
-                  <SelectField 
-                    label="Customer group" 
-                    value={customer.customerGroup}
-                    options={[
-                      { value: "", label: "-" },
-                      { value: "Corporate", label: "Corporate" },
-                      { value: "Wholesale", label: "Wholesale" },
-                      { value: "VIP", label: "VIP" },
-                      { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
-                    ]}
-                  />
-                </div>
-
-                {/* CREDIT Section */}
-                <div className="flex-1 max-w-[200px]">
-                  <SectionHeader>Credit</SectionHeader>
-                  <CheckboxField label="Credit customer" checked={false} />
-                </div>
-              </div>
-            </div>
-          ) : activeTab === "remarks" ? (
-            // Remarks Tab Content (placeholder)
-            <div className="p-[20px] flex-1 overflow-auto">
-              <div className="flex gap-[60px]">
-                <div className="flex-1">
-                  <SectionHeader>Remarks</SectionHeader>
-                  <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">
-                    Remarks content will be displayed here.
-                  </p>
-                </div>
+              <div className="bg-white border border-[#E5E7EB] rounded-xl p-8">
+                <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">
+                  {privateTabLabels[activeTab] || "Details"} content will be displayed here.
+                </p>
               </div>
             </div>
           ) : (
-            // Contact Tab Content (Default - Frame1354)
-            <div className="p-[20px] flex-1 overflow-auto">
-              <Frame1354 />
+            // Details Tab Content - unified card layout, mirroring business customers
+            <div className="@container">
+              <div className="py-[20px] px-[16px] sm:px-[24px] lg:px-[32px] xl:px-[48px] max-w-[1200px] w-full mx-auto">
+                <div className="flex flex-col gap-6 mb-4">
+                  {/* Customer identity card */}
+                  <Card className={DETAIL_CARD_CLASS}>
+                    <CardContent className="p-8">
+                      <div className="flex items-start justify-between gap-[10px] mb-[4px]">
+                        <div className="flex items-center gap-[10px]">
+                          <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
+                            {customer.customerName}
+                          </h2>
+                          <span className={`shrink-0 font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border ${isInactive ? "border-[#999] text-[#999]" : "border-[#1a1a1a] text-[#1a1a1a]"}`}>
+                            {isInactive ? "Inactive" : "Active"}
+                          </span>
+                        </div>
+                        <DropdownMenu.Root>
+                          <DropdownMenu.Trigger asChild>
+                            <button type="button" className="shrink-0 p-[4px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors">
+                              <MoreHorizontal className="size-[18px]" />
+                            </button>
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.Content
+                              className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[200px]"
+                              align="end"
+                              sideOffset={4}
+                            >
+                              <DropdownMenu.Item
+                                onClick={() => setIsChangeStoreAccessModalOpen(true)}
+                                className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors"
+                              >
+                                Change store access
+                              </DropdownMenu.Item>
+                            </DropdownMenu.Content>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
+                      </div>
+                      <div className="flex items-center justify-between mb-[16px]">
+                        <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">{customer.customerType}</p>
+                        <p className="font-['Roboto:Regular',sans-serif] text-[13px] text-[#666] whitespace-nowrap">
+                          Customer since: {(customer as any).customerSince || "–"}
+                        </p>
+                      </div>
+                      <div className="border-t border-[#E5E7EB] mb-[16px]" />
+
+                      <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
+                        <div className="w-full @md:w-[260px]">
+                          <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
+                          {isInactive ? (
+                            <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                          ) : (
+                            <InputField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                          )}
+                        </div>
+                        <div className="w-full @md:w-[260px]">
+                          <ReadOnlyField compact label="Store" value={getStoreOrProfileLabel(customer.store)} />
+                          {isInactive ? (
+                            <ReadOnlyField compact label="Customer group" value={customer.customerGroup || "–"} />
+                          ) : (
+                            <SelectField
+                              compact
+                              label="Customer group"
+                              value={customer.customerGroup}
+                              options={[
+                                { value: "", label: "-" },
+                                { value: "Friends and family", label: "Friends and family" },
+                                { value: "VIP", label: "VIP" },
+                                { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
+                              ]}
+                            />
+                          )}
+                        </div>
+                        <div className="w-full @md:w-[260px]">
+                          <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
+                        </div>
+                      </div>
+
+                      {isInactive && deactivationReason && (
+                        <div className="mt-[16px] pt-[10px] border-t border-[#E5E7EB]">
+                          <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Contact card */}
+                  <Card className={DETAIL_CARD_CLASS}>
+                    <CardContent className="p-8">
+                      <div className="flex items-center justify-between mb-[10px]">
+                        <SectionHeader className="">Contact</SectionHeader>
+                        <button type="button" onClick={() => setIsEditContactModalOpen(true)} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label="Edit contact">
+                          <Pencil className="size-[16px]" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
+                        <div className="w-full @md:w-[260px]">
+                          <ReadOnlyField compact label="First name" value={contactFields.firstName} />
+                          <ReadOnlyField compact label="Last name" value={contactFields.lastName} />
+                          <ReadOnlyField compact label="Birth date" value={contactFields.birthDate} />
+                          <ReadOnlyField compact label="Gender" value={contactFields.gender} />
+                        </div>
+                        <div className="w-full @md:w-[260px]">
+                          <ReadOnlyField compact label="Email" value={contactFields.email} />
+                          <ReadOnlyField compact label="Mobile number" value={contactFields.mobileNumber} />
+                          <ReadOnlyField compact label="SSN" value={contactFields.ssn} />
+                        </div>
+                        <div className="w-full @md:w-[260px]">
+                          <ReadOnlyField compact label="Loyalty program name" value={contactFields.loyaltyProgramName} />
+                          <ReadOnlyField compact label="Ext. identity number" value={contactFields.extIdentityNumber} required />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Credit + Customer card */}
+                  {(creditCustomerDraft || customerCard) && (
+                    <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+                      {creditCustomerDraft && (
+                        <Card className={DETAIL_CARD_CLASS}>
+                          <CardContent className="p-8">
+                            <div className="flex items-center justify-between mb-[10px]">
+                              <div className="flex items-center gap-[10px]">
+                                <SectionHeader className="">Credit</SectionHeader>
+                                {creditLocked && (
+                                  <span className="font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border border-[#1a1a1a] text-[#1a1a1a]">
+                                    Locked
+                                  </span>
+                                )}
+                              </div>
+                              <DropdownMenu.Root>
+                                <DropdownMenu.Trigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="Credit options"
+                                    className="shrink-0 p-[4px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                                  >
+                                    <MoreHorizontal className="size-[18px]" />
+                                  </button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Portal>
+                                  <DropdownMenu.Content
+                                    align="end"
+                                    sideOffset={4}
+                                    className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[200px]"
+                                  >
+                                    <DropdownMenu.Item
+                                      onClick={() => setIsManualPaymentModalOpen(true)}
+                                      className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors"
+                                    >
+                                      Manual payment
+                                    </DropdownMenu.Item>
+                                  </DropdownMenu.Content>
+                                </DropdownMenu.Portal>
+                              </DropdownMenu.Root>
+                            </div>
+                            <div className="grid grid-cols-1 @sm:grid-cols-2 gap-x-8">
+                              <div>
+                                <InputField compact label="Credit limit" value={creditLimit} onChange={setCreditLimit} disabled={creditLocked} />
+                                <div className="max-w-[220px]">
+                                  <DateField label="Balance due date" value={balanceDueDate} onChange={setBalanceDueDate} disabled={creditLocked} />
+                                </div>
+                              </div>
+                              <div>
+                                <ReadOnlyField compact label="Credit balance" value={creditBalance} />
+                                <CheckboxField compact label="Reference number required" checked={referenceNumberRequired} onChange={setReferenceNumberRequired} disabled={creditLocked} />
+                                <CheckboxField compact label="Credit locked" checked={creditLocked} onChange={setCreditLocked} />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {customerCard && (
+                        <Card className={DETAIL_CARD_CLASS}>
+                          <CardContent className="p-8">
+                            <div className="flex items-center justify-between mb-[10px]">
+                              <SectionHeader className="">Customer card</SectionHeader>
+                              <DropdownMenu.Root>
+                                <DropdownMenu.Trigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="Customer card options"
+                                    className="shrink-0 p-[4px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                                  >
+                                    <MoreHorizontal className="size-[18px]" />
+                                  </button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Portal>
+                                  <DropdownMenu.Content
+                                    align="end"
+                                    sideOffset={4}
+                                    className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[200px]"
+                                  >
+                                    <DropdownMenu.Item
+                                      onClick={() => customerCard.status !== "Inactive" && handleInactivateCustomerCard()}
+                                      disabled={customerCard.status === "Inactive"}
+                                      className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors data-[disabled]:text-[#ccc] data-[disabled]:cursor-not-allowed data-[disabled]:focus:bg-transparent"
+                                    >
+                                      Inactivate card
+                                    </DropdownMenu.Item>
+                                  </DropdownMenu.Content>
+                                </DropdownMenu.Portal>
+                              </DropdownMenu.Root>
+                            </div>
+                            <div className="grid grid-cols-1 @sm:grid-cols-2 gap-x-8">
+                              <div>
+                                <ReadOnlyField compact label="Card ID" value={customerCard.cardId} />
+                                <ReadOnlyField compact label="External card ID" value={customerCard.externalCardId} />
+                              </div>
+                              <div>
+                                <ReadOnlyField compact label="Status" value={customerCard.status} />
+                                <ReadOnlyField compact label="Start date" value={customerCard.startDate} />
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Address + Notes */}
+                  <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+                    <Card className={DETAIL_CARD_CLASS}>
+                      <CardContent className="p-8">
+                        <div className="flex items-center justify-between mb-[10px]">
+                          <SectionHeader className="">Address</SectionHeader>
+                          <button type="button" onClick={() => setIsEditAddressModalOpen(true)} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label="Edit address">
+                            <Pencil className="size-[16px]" />
+                          </button>
+                        </div>
+                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value={addressFields.addressLine1} />
+                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value={addressFields.addressLine2} />
+                        <ReadOnlyField compact hideIfEmpty label="Postal code" value={addressFields.postalCode} />
+                        <ReadOnlyField compact hideIfEmpty label="City" value={addressFields.city} />
+                        <ReadOnlyField compact hideIfEmpty label="Country" value={addressFields.country} />
+                      </CardContent>
+                    </Card>
+
+                    <Card className={DETAIL_CARD_CLASS}>
+                      <CardContent className="p-8 h-full flex flex-col">
+                        <SectionHeader>Notes</SectionHeader>
+                        <FieldLabel>Customer notes</FieldLabel>
+                        <textarea
+                          ref={notesTextareaRef}
+                          value={customerNotes}
+                          onChange={(e) => setCustomerNotes(e.target.value)}
+                          className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
+                          style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Relationships - full width */}
+                  <Card className={DETAIL_CARD_CLASS}>
+                    <CardContent className="p-8">
+                      <div className="flex items-center justify-between mb-[10px]">
+                        <SectionHeader className="">Relationships</SectionHeader>
+                        <button
+                          type="button"
+                          onClick={() => console.log("Add relationship clicked")}
+                          aria-label="Add relationship"
+                          className="size-[36px] rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer shrink-0 transition-colors"
+                        >
+                          <Plus className="size-[16px] text-[#1a1a1a]" />
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse min-w-[500px]">
+                          <thead>
+                            <tr>
+                              <th className="bg-[#595959] h-[28px] text-left px-[10px] text-white font-['Roboto:Bold',sans-serif] text-[13px] uppercase border-r border-white">Relationship type</th>
+                              <th className="bg-[#595959] h-[28px] text-left px-[10px] text-white font-['Roboto:Bold',sans-serif] text-[13px] uppercase border-r border-white">Identifier</th>
+                              <th className="bg-[#595959] h-[28px] text-left px-[10px] text-white font-['Roboto:Bold',sans-serif] text-[13px] uppercase border-r border-white">Connection</th>
+                              <th className="bg-[#595959] h-[28px] text-left px-[10px] text-white font-['Roboto:Bold',sans-serif] text-[13px] uppercase">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="bg-white h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] border-b border-[#e5e5e5]">Contact</td>
+                              <td className="bg-white h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] underline border-b border-[#e5e5e5]">11223344</td>
+                              <td className="bg-white h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] border-b border-[#e5e5e5]">All Stores</td>
+                              <td className="bg-white h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] border-b border-[#e5e5e5]">Active</td>
+                            </tr>
+                            <tr>
+                              <td className="bg-[#f7f7f7] h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a]">Member</td>
+                              <td className="bg-[#f7f7f7] h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] underline">44332211</td>
+                              <td className="bg-[#f7f7f7] h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a]">EG Retail VIP Club SE</td>
+                              <td className="bg-[#f7f7f7] h-[43px] px-[12px] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a]">Active</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
           )}
         </div>
         
         {/* Modals - Only Private customer modals */}
+        <EditContactModal
+          isOpen={isEditContactModalOpen}
+          onClose={() => setIsEditContactModalOpen(false)}
+          onSave={handleSaveContact}
+          fields={contactFields}
+        />
+
+        <EditAddressModal
+          isOpen={isEditAddressModalOpen}
+          onClose={() => setIsEditAddressModalOpen(false)}
+          onSave={handleSaveAddress}
+          fields={addressFields}
+        />
+
+        <ChangeStoreAccessModal
+          isOpen={isChangeStoreAccessModalOpen}
+          onClose={() => setIsChangeStoreAccessModalOpen(false)}
+          onSave={handleSaveStoreAccess}
+          value={storeAccess}
+        />
+
+        <ManualPaymentModal
+          isOpen={isManualPaymentModalOpen}
+          onClose={() => setIsManualPaymentModalOpen(false)}
+          onSubmit={handleManualPayment}
+        />
+
         <DeactivatePrivateCustomerModal
           isOpen={isDeactivateModalOpen}
           onClose={() => setIsDeactivateModalOpen(false)}
@@ -810,12 +1439,19 @@ export function CustomerDetail() {
   }
 
   // Business customer layout
+  const businessTab = searchParams.get("tab") || "details";
+  const businessTabLabels: Record<string, string> = {
+    sales: "Sales",
+    offers: "Offers",
+    "customer-orders": "Customer orders"
+  };
+
   return (
     <>
-      <div className="flex flex-col h-full bg-white overflow-auto">
-        <div className="py-[20px] px-[16px] sm:px-[24px] lg:px-[32px] xl:px-[48px] flex-1 overflow-auto max-w-[1800px] w-full mx-auto">
+      <div ref={contactsScrollContainerRef} className="flex flex-col h-full bg-[#F4F5F6] overflow-auto">
+        <div className={businessTab === "sales" || businessTab === "offers" ? "w-full flex-1 flex flex-col min-h-0" : "py-[20px] px-[16px] sm:px-[24px] lg:px-[32px] xl:px-[48px] max-w-[1200px] w-full mx-auto"}>
           {/* Organization Status Banner */}
-          {organizationStatus && (
+          {organizationStatus && businessTab !== "sales" && businessTab !== "offers" && (
             <div className="mb-[20px] px-[16px] py-[12px] border-l-4 bg-[#f5f5f5] border-[#757575]">
               <div className="flex items-start gap-[12px]">
                 <div className="flex-1">
@@ -834,86 +1470,105 @@ export function CustomerDetail() {
               </div>
             </div>
           )}
-          
+
+          {businessTab === "sales" ? (
+            <SalesGrid isBusiness />
+          ) : businessTab === "offers" ? (
+            <OffersGrid />
+          ) : businessTab !== "details" ? (
+            <div className="bg-white border border-[#E5E7EB] rounded-xl p-8">
+              <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">
+                {businessTabLabels[businessTab] || "Details"} content will be displayed here.
+              </p>
+            </div>
+          ) : (
+          <>
           {/* Top Section */}
-          {/* Masonry-style grid: Customer card spans the full left height; Organisation+Credit
-              share row 1 on the right, Addresses spans that same right-hand width on row 2,
-              Contact persons spans the full width on row 3. */}
-          <style>{`
-            .customer-top-grid {
-              display: grid;
-              grid-template-columns: 1fr;
-              grid-template-areas: "customer" "organisation" "credit" "addresses" "contact";
-              gap: 1rem;
-            }
-            @media (min-width: 1024px) {
-              .customer-top-grid {
-                grid-template-columns: 3fr 2fr 5fr;
-                grid-template-areas:
-                  "customer organisation credit"
-                  "customer addresses addresses"
-                  "contact contact contact";
-              }
-              .customer-top-grid.no-org {
-                grid-template-columns: 3fr 7fr;
-                grid-template-areas:
-                  "customer credit"
-                  "customer addresses"
-                  "contact contact";
-              }
-            }
-          `}</style>
-          <div className={`customer-top-grid mb-4${organizationStatus === "deleted" ? " no-org" : ""}`}>
-            {/* Customer identity card */}
-            <div style={{ gridArea: "customer" }}>
-              <Card className={`${DETAIL_CARD_CLASS} h-full`}>
-                <CardContent className="pt-6">
+          {/* Every section is an equal-status white card, stacked in rows. Each row uses a
+              container query (not a viewport breakpoint) so cards adapt to the 1039px cap
+              itself rather than the full window width. */}
+          <div className="@container">
+            <div className="flex flex-col gap-6 mb-4">
+              {/* Customer identity card - full width, 3 field columns */}
+              <Card className={DETAIL_CARD_CLASS}>
+                <CardContent className="p-8">
                   <div className="flex items-start justify-between gap-[10px] mb-[4px]">
-                    <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
-                      {customer.customerName}
-                    </h2>
-                    <span className={`shrink-0 font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border ${isInactive ? "border-[#999] text-[#999]" : "border-[#1a1a1a] text-[#1a1a1a]"}`}>
-                      {isInactive ? "Inactive" : "Active"}
-                    </span>
+                    <div className="flex items-center gap-[10px]">
+                      <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
+                        {displayCustomerName}
+                      </h2>
+                      <span className={`shrink-0 font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border ${isInactive ? "border-[#999] text-[#999]" : "border-[#1a1a1a] text-[#1a1a1a]"}`}>
+                        {isInactive ? "Inactive" : "Active"}
+                      </span>
+                    </div>
+                    <DropdownMenu.Root>
+                      <DropdownMenu.Trigger asChild>
+                        <button type="button" className="shrink-0 p-[4px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors">
+                          <MoreHorizontal className="size-[18px]" />
+                        </button>
+                      </DropdownMenu.Trigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                          className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[200px]"
+                          align="end"
+                          sideOffset={4}
+                        >
+                          <DropdownMenu.Item
+                            onClick={() => setIsChangeCustomerNameModalOpen(true)}
+                            className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors"
+                          >
+                            Change customer name
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item
+                            onClick={() => setIsChangeStoreAccessModalOpen(true)}
+                            className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors"
+                          >
+                            Change store access
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Root>
                   </div>
-                  <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">{customer.customerType}</p>
+                  <div className="flex items-center justify-between mb-[16px]">
+                    <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">{customer.customerType}</p>
+                    <p className="font-['Roboto:Regular',sans-serif] text-[13px] text-[#666] whitespace-nowrap">
+                      Customer since: {(customer as any).customerSince || "–"}
+                    </p>
+                  </div>
                   <div className="border-t border-[#E5E7EB] mb-[16px]" />
 
-                  <SectionHeader>Details</SectionHeader>
-                  <ReadOnlyField label="Customer number" value={customer.customerNumber} />
-                  {isInactive || organizationStatus === "deleted" ? (
-                    <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
-                  ) : (
-                    <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
-                  )}
-                  {isInactive ? (
-                    <ReadOnlyField label="Customer group" value={customer.customerGroup || "–"} />
-                  ) : (
-                    <SelectField
-                      label="Customer group"
-                      value={customer.customerGroup}
-                      options={[
-                        { value: "Corporate", label: "Corporate" },
-                        { value: "Wholesale", label: "Wholesale" },
-                        { value: "VIP", label: "VIP" },
-                        { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
-                      ]}
-                    />
-                  )}
-                  <ReadOnlyField label="Profile" value={customer.store} />
-                  <CheckboxField label="Credit customer" checked={!!customer.creditC} />
-
-                  <div className="mt-[16px]">
-                    <SectionHeader>Contact details</SectionHeader>
-                    <ReadOnlyField label="Email" value={customer.email} />
-                    <ReadOnlyField label="Phone number" value={customer.phone} />
-                  </div>
-
-                  <div className="mt-[16px]">
-                    <SectionHeader>Notes</SectionHeader>
-                    <p className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a]">
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    </p>
+                  <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
+                    <div className="w-full @md:w-[260px]">
+                      <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
+                      {isInactive || organizationStatus === "deleted" ? (
+                        <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                      ) : (
+                        <InputField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                      )}
+                      <ReadOnlyField compact label="Profile" value={getStoreOrProfileLabel(customer.store)} />
+                    </div>
+                    <div className="w-full @md:w-[260px]">
+                      <InputField compact label="Email" value={customer.email} />
+                      <InputField compact label="Phone number" value={customer.phone} />
+                      {isInactive ? (
+                        <ReadOnlyField compact label="Customer group" value={customer.customerGroup || "–"} />
+                      ) : (
+                        <SelectField
+                          compact
+                          label="Customer group"
+                          value={customer.customerGroup}
+                          options={[
+                            { value: "Corporate", label: "Corporate" },
+                            { value: "Wholesale", label: "Wholesale" },
+                            { value: "VIP", label: "VIP" },
+                            { value: "Demo Store VIP customers", label: "Demo Store VIP customers" }
+                          ]}
+                        />
+                      )}
+                    </div>
+                    <div className="w-full @md:w-[260px]">
+                      <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
+                    </div>
                   </div>
 
                   {isInactive && deactivationReason && (
@@ -923,102 +1578,300 @@ export function CustomerDetail() {
                   )}
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Organisation card */}
-            {organizationStatus !== "deleted" && (
-              <div style={{ gridArea: "organisation" }}>
+              {/* Organisation + Notes */}
+              <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+                {organizationStatus !== "deleted" && (
+                  <Card className={DETAIL_CARD_CLASS}>
+                    <CardContent className="p-8">
+                      <div className="flex items-center justify-between mb-[10px]">
+                        <SectionHeader className="" icon={<LinkIcon className="size-[14px] text-[#1a1a1a]" />}>Organisation</SectionHeader>
+                        {!isExternalOrg && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isEditingOrgIdentity) {
+                                setOrgNameDraft(customer.customerName);
+                                setOrgNumberDraft(customer.orgNumber);
+                                setOrgTypeDraft(customer.organizationType || "Branch");
+                                setOrgBranchNumberDraft(customer.branchNumber || "");
+                              }
+                              setIsEditingOrgIdentity((prev) => !prev);
+                            }}
+                            className="size-[36px] rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer shrink-0 transition-colors"
+                            aria-label="Edit organization details"
+                          >
+                            <Pencil className="size-[16px] text-[#1a1a1a]" />
+                          </button>
+                        )}
+                      </div>
+
+                      {isExternalOrg ? (
+                        <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">Updated by external party</p>
+                      ) : isEditingOrgIdentity ? (
+                        <div className="mb-[16px] p-[16px] bg-white border border-[#999] rounded-[8px] flex items-start gap-[10px]">
+                          <Info className="size-[18px] text-[#1a1a1a] shrink-0" />
+                          <p className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a]">
+                            Changes made here will also update the organization register.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-start gap-[16px]">
+                        <div className="grid grid-cols-2 gap-x-8 flex-1">
+                          <div>
+                            {isEditingOrgIdentity ? (
+                              <InputField compact label="Organisation name" value={orgNameDraft} onChange={setOrgNameDraft} />
+                            ) : (
+                              <>
+                                <FieldLabel>Organisation name</FieldLabel>
+                                {(customer as any).organizationRegisterId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate(`/customer/organizations/${(customer as any).organizationRegisterId}`)}
+                                    className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[5px] cursor-pointer hover:text-[#1c7862]"
+                                  >
+                                    {customer.customerName}
+                                  </button>
+                                ) : (
+                                  <div className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[5px]">
+                                    {customer.customerName}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {isEditingOrgIdentity ? (
+                              <InputField compact label="Organisation number" value={orgNumberDraft} onChange={setOrgNumberDraft} />
+                            ) : (
+                              <ReadOnlyField compact label="Organisation number" value={customer.orgNumber} />
+                            )}
+                            {isExternalOrg && (
+                              <ReadOnlyField compact hideIfEmpty label="Duns number" value={customer.dunsNumber || ""} />
+                            )}
+                          </div>
+                          <div>
+                            {isEditingOrgIdentity ? (
+                              <SelectField compact label="Organization type" value={orgTypeDraft} options={ORG_TYPE_OPTIONS} onChange={setOrgTypeDraft} />
+                            ) : (
+                              <ReadOnlyField compact label="Organization type" value={customer.organizationType || "Branch"} />
+                            )}
+                            {isEditingOrgIdentity ? (
+                              <InputField compact label="Branch number" value={orgBranchNumberDraft} onChange={setOrgBranchNumberDraft} />
+                            ) : (
+                              <ReadOnlyField compact hideIfEmpty label="Branch number" value={customer.branchNumber || customer.orgNumber} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Card className={DETAIL_CARD_CLASS}>
-                  <CardContent className="pt-6">
-                    <SectionHeader icon={<LinkIcon className="size-[14px] text-[#1a1a1a]" />}>Organisation</SectionHeader>
-                    <ReadOnlyField label="Organisation name" value={organizationName} />
-                    <ReadOnlyField label="Organisation number" value={customer.orgNumber} />
-                    <ReadOnlyField label="Branch number" value={customer.orgNumber} />
+                  <CardContent className="p-8 h-full flex flex-col">
+                    <SectionHeader>Notes</SectionHeader>
+                    <FieldLabel>Customer notes</FieldLabel>
+                    <textarea
+                      ref={notesTextareaRef}
+                      value={customerNotes}
+                      onChange={(e) => setCustomerNotes(e.target.value)}
+                      className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
+                      style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
+                    />
                   </CardContent>
                 </Card>
               </div>
-            )}
 
-            {/* Credit card */}
-            <div style={{ gridArea: "credit" }}>
-              <Card className={DETAIL_CARD_CLASS}>
-                <CardContent className="pt-6">
-                  <SectionHeader>Credit</SectionHeader>
-                  <div className="grid grid-cols-2 gap-x-6">
-                    <div>
-                      <ReadOnlyField label="Credit limit" value={customer.creditBalance || "0"} />
-                      <ReadOnlyField label="Credit balance" value="0" />
-                      <ReadOnlyField label="Balance due date" value="2026-04-01" />
-                    </div>
-                    <div>
-                      <CheckboxField label="Reference number required" checked={false} />
-                      <CheckboxField label="Credit locked" checked={false} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+              {/* Addresses */}
+              <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-6">
+                {organizationStatus !== "deleted" ? (
+                  isExternalOrg ? (
+                    ((customer as any).addresses || []).map((addr: any, index: number) => (
+                      <Card key={index} className={DETAIL_CARD_CLASS}>
+                        <CardContent className="p-8">
+                          <SectionHeader className="mb-[4px]">{addr.type}</SectionHeader>
+                          <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">Updated by external party</p>
+                          <ReadOnlyField compact label="Address line 1" value={addr.addressLine1} />
+                          <ReadOnlyField compact label="Address line 2" value={addr.addressLine2 || "-"} />
+                          <ReadOnlyField compact label="Postal code" value={addr.postalCode} />
+                          <ReadOnlyField compact label="City" value={addr.city} />
+                          <ReadOnlyField compact label="Country" value={addr.country} />
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <>
+                      <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Address" fields={businessAddresses.general} onEdit={() => setEditingAddressType("general")} /></CardContent></Card>
+                      {businessAddresses.delivery.addressLine1 && (
+                        <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Delivery address" fields={businessAddresses.delivery} onEdit={() => setEditingAddressType("delivery")} /></CardContent></Card>
+                      )}
+                      {businessAddresses.invoice.addressLine1 && (
+                        <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Invoice address" fields={businessAddresses.invoice} onEdit={() => setEditingAddressType("invoice")} /></CardContent></Card>
+                      )}
+                      {[businessAddresses.delivery.addressLine1, businessAddresses.invoice.addressLine1].filter(Boolean).length === 1 && (
+                        <Card className={DETAIL_CARD_CLASS}>
+                          <CardContent className="p-8 h-full flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => setEditingAddressType(businessAddresses.delivery.addressLine1 ? "invoice" : "delivery")}
+                              className="h-[36px] px-[20px] rounded-full border border-[#ccc] flex items-center gap-[8px] hover:bg-[#f5f5f5] cursor-pointer"
+                            >
+                              <Plus className="size-[16px] text-[#1a1a1a]" />
+                              <span className="font-['Roboto_Condensed:Bold',sans-serif] text-[15px] text-[#1a1a1a]">Add address</span>
+                            </button>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  )
+                ) : (
+                  <>
+                    <Card className={DETAIL_CARD_CLASS}>
+                      <CardContent className="p-8">
+                        <SectionHeader>Address</SectionHeader>
+                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                      </CardContent>
+                    </Card>
+                    <Card className={DETAIL_CARD_CLASS}>
+                      <CardContent className="p-8">
+                        <SectionHeader>Delivery address</SectionHeader>
+                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                      </CardContent>
+                    </Card>
+                    <Card className={DETAIL_CARD_CLASS}>
+                      <CardContent className="p-8">
+                        <SectionHeader>Invoice address</SectionHeader>
+                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </div>
 
-            {/* Addresses - same combined width as Organisation + Credit above */}
-            <div style={{ gridArea: "addresses" }}>
+              {/* Credit - visibility follows the checkbox live; Save persists the choice */}
+              {creditCustomerDraft && (
               <Card className={DETAIL_CARD_CLASS}>
-                <CardContent className="pt-6">
-                  <SectionHeader>Addresses</SectionHeader>
-                  <div className="@container">
-                    <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-4">
-                      {organizationStatus !== "deleted" ? (
-                        <>
-                          <AddressSection title="General address" inheritChecked={true} isInactive={isInactive} />
-                          <AddressSection title="Delivery address" inheritChecked={true} isInactive={isInactive} />
-                          <AddressSection title="Invoice address" inheritChecked={true} isInactive={isInactive} />
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <SectionHeader variant="address">General address</SectionHeader>
-                            <ReadOnlyField label="Address line 1" value="–" />
-                            <ReadOnlyField label="Address line 2" value="–" />
-                            <ReadOnlyField label="Postal code" value="–" />
-                            <ReadOnlyField label="City" value="–" />
-                            <ReadOnlyField label="Country" value="–" />
-                          </div>
-                          <div>
-                            <SectionHeader variant="address">Delivery address</SectionHeader>
-                            <ReadOnlyField label="Address line 1" value="–" />
-                            <ReadOnlyField label="Address line 2" value="–" />
-                            <ReadOnlyField label="Postal code" value="–" />
-                            <ReadOnlyField label="City" value="–" />
-                            <ReadOnlyField label="Country" value="–" />
-                          </div>
-                          <div>
-                            <SectionHeader variant="address">Invoice address</SectionHeader>
-                            <ReadOnlyField label="Address line 1" value="–" />
-                            <ReadOnlyField label="Address line 2" value="–" />
-                            <ReadOnlyField label="Postal code" value="–" />
-                            <ReadOnlyField label="City" value="–" />
-                            <ReadOnlyField label="Country" value="–" />
-                          </div>
-                        </>
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-between mb-[10px]">
+                    <div className="flex items-center gap-[10px]">
+                      <SectionHeader className="">Credit</SectionHeader>
+                      {creditLocked && (
+                        <span className="font-['Roboto_Condensed',sans-serif] text-[11px] font-bold uppercase px-[10px] py-[2px] rounded-full border border-[#1a1a1a] text-[#1a1a1a]">
+                          Locked
+                        </span>
                       )}
                     </div>
+                    <DropdownMenu.Root>
+                      <DropdownMenu.Trigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Credit options"
+                          className="shrink-0 p-[4px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                        >
+                          <MoreHorizontal className="size-[18px]" />
+                        </button>
+                      </DropdownMenu.Trigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                          align="end"
+                          sideOffset={4}
+                          className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[200px]"
+                        >
+                          <DropdownMenu.Item
+                            onClick={() => setIsManualPaymentModalOpen(true)}
+                            className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors"
+                          >
+                            Manual payment
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Root>
+                  </div>
+                  <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-x-8">
+                    <div>
+                      <InputField compact label="Credit limit" value={creditLimit} onChange={setCreditLimit} disabled={creditLocked} />
+                      <ReadOnlyField compact label="Credit balance" value={creditBalance} />
+                    </div>
+                    <div>
+                      <CheckboxField compact label="Reference number required" checked={referenceNumberRequired} onChange={setReferenceNumberRequired} disabled={creditLocked} />
+                      <CheckboxField compact label="Credit locked" checked={creditLocked} onChange={setCreditLocked} />
+                    </div>
+                    <div className="max-w-[220px]">
+                      <DateField label="Balance due date" value={balanceDueDate} onChange={setBalanceDueDate} disabled={creditLocked} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+              )}
 
-            {/* Contact persons - full width */}
-            <div style={{ gridArea: "contact" }}>
-              <Card className={DETAIL_CARD_CLASS}>
-                <CardContent className="pt-6">
-                  <ContactPersonsGrid />
-                </CardContent>
-              </Card>
+              {/* Contact persons - full width */}
+              <div ref={contactsWrapperRef} style={contactsExpandStyle}>
+                <Card className={DETAIL_CARD_CLASS}>
+                  <CardContent className="p-8">
+                    <ContactPersonsGrid isExpanded={isContactsExpanded} onToggleExpand={() => setIsContactsExpanded((prev) => !prev)} />
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
 
       {/* Modals */}
+      <ChangeStoreAccessModal
+        isOpen={isChangeStoreAccessModalOpen}
+        onClose={() => setIsChangeStoreAccessModalOpen(false)}
+        onSave={handleSaveStoreAccess}
+        value={storeAccess}
+      />
+
+      <ChangeCustomerNameModal
+        isOpen={isChangeCustomerNameModalOpen}
+        onClose={() => setIsChangeCustomerNameModalOpen(false)}
+        onSave={handleSaveCustomerName}
+        currentName={displayCustomerName}
+      />
+
+      <ManualPaymentModal
+        isOpen={isManualPaymentModalOpen}
+        onClose={() => setIsManualPaymentModalOpen(false)}
+        onSubmit={handleManualPayment}
+      />
+
+      {editingAddressType && (
+        <EditAddressModal
+          isOpen={!!editingAddressType}
+          onClose={() => setEditingAddressType(null)}
+          onSave={(fields, useAs) => {
+            handleSaveBusinessAddress(editingAddressType, fields);
+            if (useAs?.delivery) handleSaveBusinessAddress("delivery", fields);
+            if (useAs?.invoice) handleSaveBusinessAddress("invoice", fields);
+          }}
+          fields={businessAddresses[editingAddressType]}
+          title={`Edit ${BUSINESS_ADDRESS_TITLES[editingAddressType].toLowerCase()}`}
+          noticeText="Address information is shared with the organisation."
+          onRemove={editingAddressType !== "general" ? () => handleSaveBusinessAddress(editingAddressType, emptyAddress) : undefined}
+          useAsOptions={editingAddressType === "general" ? {
+            deliveryMissing: !businessAddresses.delivery.addressLine1,
+            invoiceMissing: !businessAddresses.invoice.addressLine1
+          } : undefined}
+        />
+      )}
+
       <DeactivateBusinessCustomerModal
         isOpen={isDeactivateModalOpen}
         onClose={() => setIsDeactivateModalOpen(false)}

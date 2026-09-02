@@ -86,6 +86,47 @@ const mockOrganizations = [
       { id: 3, name: "Retail Partner AB", identifier: "55667788", email: "info@retailpartner.se", phone: "+46 8 123 456 78", status: "Active" }
     ]
   },
+  {
+    id: 9,
+    organizationName: "EG Retail Trondheim",
+    orgNumber: "968992600",
+    branchNumber: "9689926",
+    organizationType: "Branch",
+    country: "NO",
+    source: "Manual",
+    status: "Active",
+    email: "post@egretailtrondheim.no",
+    phone: "+47 73 12 34 56",
+    loyaltyProgram: "EG Trondheim",
+    addresses: {
+      general: {
+        line1: "Skonnertvegen 8-10",
+        line2: "",
+        postalCode: "7053",
+        city: "Trondheim",
+        country: "Norway"
+      },
+      delivery: {
+        inheritGeneral: true,
+        line1: "Skonnertvegen 8-10",
+        line2: "",
+        postalCode: "7053",
+        city: "Trondheim",
+        country: "Norway"
+      },
+      invoice: {
+        inheritGeneral: false,
+        line1: "Skonnertvegen 10",
+        line2: "",
+        postalCode: "7053",
+        city: "Trondheim",
+        country: "Norway"
+      }
+    },
+    businessCustomers: [
+      { id: 12, name: "EG Retail Trondheim", identifier: "738291045", email: "post@egretailtrondheim.no", phone: "+4773123456", status: "Active" }
+    ]
+  },
 ];
 
 export function OrganizationDetail() {
