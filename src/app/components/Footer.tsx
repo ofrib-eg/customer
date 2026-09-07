@@ -826,7 +826,17 @@ export function Footer({
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
-              {!isCustomerSalesOrOffersTab && (
+              {activeTab === "offers" ? (
+                <ActionButton
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && (window as any).openNewOfferModal) {
+                      (window as any).openNewOfferModal();
+                    }
+                  }}
+                >
+                  New offer
+                </ActionButton>
+              ) : !isCustomerSalesOrOffersTab && (
                 <ActionButton
                   isPrimary
                   onClick={() => {

@@ -17,12 +17,12 @@ interface Option {
 }
 
 export const PROFILE_OPTIONS: Option[] = [
-  { id: "1", label: "1 - Default" },
-  { id: "20", label: "20 - Convenience - NO" },
-  { id: "30", label: "30 - Specialist Trades - NO" }
+  { id: "1001", label: "1001 - Coop Midt" },
+  { id: "1002", label: "1002 - Coop Øst" },
+  { id: "1003", label: "1003 - Coop Nord" }
 ];
 
-const TEAM_OPTIONS: Option[] = [
+export const TEAM_OPTIONS: Option[] = [
   { id: "north", label: "Team North" },
   { id: "south", label: "Team South" },
   { id: "west", label: "Team West" }
@@ -38,6 +38,30 @@ export const STORE_OPTIONS: Option[] = [
 export function getStoreOrProfileLabel(id: string): string {
   const match = STORE_OPTIONS.find((o) => o.id === id) || PROFILE_OPTIONS.find((o) => o.id === id);
   return match ? match.label : id;
+}
+
+export function getStoreGroupLabel(customer: { store?: string; storeAccess?: StoreAccessValue }): string {
+  const { storeAccess } = customer;
+  if (!storeAccess) {
+    return customer.store ? getStoreOrProfileLabel(customer.store) : "–";
+  }
+
+  if (storeAccess.type === "all") return "All stores";
+
+  if (storeAccess.type === "profile") {
+    const profile = PROFILE_OPTIONS.find((o) => o.id === storeAccess.profileId);
+    return profile ? profile.label : "Selected profile";
+  }
+
+  if (storeAccess.type === "team") {
+    const team = TEAM_OPTIONS.find((o) => o.id === storeAccess.teamId);
+    return team ? team.label : "Selected team";
+  }
+
+  const storeLabels = storeAccess.storeIds.map((id) => getStoreOrProfileLabel(id));
+  if (storeLabels.length === 0) return "–";
+  if (storeLabels.length === 1) return storeLabels[0];
+  return storeLabels.join(", ");
 }
 
 interface ChangeStoreAccessModalProps {

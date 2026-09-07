@@ -21,21 +21,6 @@ export const mockContacts = [
     modifiedDate: "2026-02-18"
   },
   { 
-    id: 2, 
-    identityNumber: "44332211",
-    name: "EG Retail Göteborg", 
-    firstName: "EG Retail",
-    lastName: "Göteborg",
-    company: "EG Retail Göteborg", 
-    email: "contact@egretail.se", 
-    phone: "+46 31 123 45 67",
-    mobile: "+46 70 987 65 43",
-    bin: "BIN002",
-    loyaltyProgramName: "Business Partner",
-    modifiedBy: "System",
-    modifiedDate: "2026-02-17"
-  },
-  { 
     id: 3, 
     identityNumber: "34567890123",
     name: "Maria Hansen", 

@@ -1,8 +1,8 @@
 import React from "react";
-import svgPaths from "../../../imports/svg-uks517y0el";
+import * as Popover from "@radix-ui/react-popover";
 import imgCheckbox from "figma:asset/898d19ffff6bfdba80f8fefc8d425930bb2656d8.png";
 import imgCheckboxUnchecked from "figma:asset/74bd78976a668e1cc61b38017d679dff360ace45.png";
-import { Search, Plus, Maximize2, Minimize2 } from "lucide-react";
+import { Search, Plus, Maximize2, Minimize2, MoreHorizontal } from "lucide-react";
 import { AddContactPersonModal } from "./AddContactPersonModal";
 import { LinkedContact } from "./contactTypes";
 
@@ -237,13 +237,29 @@ function ColumnBlock({
 }
 
 export function ContactPersonsGrid({ isExpanded, onToggleExpand }: { isExpanded: boolean; onToggleExpand: () => void }) {
-  const [selectedRow, setSelectedRow] = React.useState<string | null>("2");
+  const [selectedRow, setSelectedRow] = React.useState<string | null>(null);
   const [contacts, setContacts] = React.useState<ContactPerson[]>(mockContacts);
   const [isAddContactOpen, setIsAddContactOpen] = React.useState(false);
   const [columnOrder, setColumnOrder] = React.useState<string[]>(DEFAULT_COLUMN_ORDER);
   const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>(DEFAULT_COLUMN_WIDTHS);
   const [manuallyResized, setManuallyResized] = React.useState<Record<string, boolean>>({});
   const [dragOverColumnId, setDragOverColumnId] = React.useState<string | null>(null);
+  const [openMenuContactId, setOpenMenuContactId] = React.useState<string | null>(null);
+
+  const handleSetMainContact = (contactId: string) => {
+    setContacts((prev) => prev.map((c) => ({ ...c, isMainContact: c.id === contactId })));
+  };
+
+  const handleAddCustomerCard = (contactId: string) => {
+    setContacts((prev) =>
+      prev.map((c) => (c.id === contactId ? { ...c, customerCard: `0000000${(20 + Number(contactId)).toString().padStart(3, "0")}` } : c))
+    );
+  };
+
+  const handleRemoveContact = (contactId: string) => {
+    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    setSelectedRow((prev) => (prev === contactId ? null : prev));
+  };
 
   const dragColumnIdRef = React.useRef<string | null>(null);
   const resizingRef = React.useRef<{ id: string; startX: number; startWidth: number } | null>(null);
@@ -390,24 +406,66 @@ export function ContactPersonsGrid({ isExpanded, onToggleExpand }: { isExpanded:
             {contacts.map((contact) => (
               <div
                 key={contact.id}
-                className={`h-[43px] overflow-clip relative ${
+                className={`h-[43px] overflow-clip relative flex items-center justify-center ${
                   selectedRow === contact.id ? "bg-[#e8ecee]" : "bg-white"
                 }`}
               >
-                {selectedRow === contact.id && (
-                  <div className="-translate-y-1/2 absolute right-[20px] size-[20px] top-[calc(50%+0.5px)]">
-                    <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 20 20">
-                      <g>
-                        <mask height="4" id={`mask-${contact.id}`} maskUnits="userSpaceOnUse" style={{ maskType: "alpha" }} width="16" x="2" y="8">
-                          <path d={svgPaths.p2d3e5d00} fill="var(--fill-0, #666666)" />
-                        </mask>
-                        <g mask={`url(#mask-${contact.id})`}>
-                          <rect fill="var(--fill-0, #666666)" height="20" width="20" />
-                        </g>
-                      </g>
-                    </svg>
-                  </div>
-                )}
+                <Popover.Root
+                  open={openMenuContactId === contact.id}
+                  onOpenChange={(open) => setOpenMenuContactId(open ? contact.id : null)}
+                >
+                  <Popover.Trigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRow(contact.id)}
+                      className="size-[28px] rounded-full flex items-center justify-center hover:bg-[#d9d9d9] cursor-pointer shrink-0 transition-colors"
+                      aria-label={`Options for ${contact.name}`}
+                    >
+                      <MoreHorizontal className="size-[16px] text-[#1a1a1a]" />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      align="start"
+                      sideOffset={4}
+                      className="z-[3000] bg-white border border-[#CCCCCC] shadow-lg min-w-[180px] outline-none"
+                    >
+                      <div className="flex flex-col py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSetMainContact(contact.id);
+                            setOpenMenuContactId(null);
+                          }}
+                          className="text-left text-[14px] font-normal text-[#1A1A1A] hover:bg-[#EAEAEA] flex items-center h-[36px] w-full px-4 whitespace-nowrap cursor-pointer"
+                        >
+                          Set as main contact
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleAddCustomerCard(contact.id);
+                            setOpenMenuContactId(null);
+                          }}
+                          disabled={!!contact.customerCard}
+                          className="text-left text-[14px] font-normal text-[#1A1A1A] hover:bg-[#EAEAEA] flex items-center h-[36px] w-full px-4 whitespace-nowrap cursor-pointer disabled:text-[#ccc] disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                        >
+                          Add customer card
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleRemoveContact(contact.id);
+                            setOpenMenuContactId(null);
+                          }}
+                          className="text-left text-[14px] font-normal text-[#1A1A1A] hover:bg-[#EAEAEA] flex items-center h-[36px] w-full px-4 whitespace-nowrap cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
                 <div
                   className={`absolute inset-0 pointer-events-none rounded-[inherit] ${
                     selectedRow === contact.id

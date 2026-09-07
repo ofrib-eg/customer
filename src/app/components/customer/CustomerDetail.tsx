@@ -15,6 +15,7 @@ import { EditAddressModal, AddressFields } from "./EditAddressModal";
 import { ChangeStoreAccessModal, StoreAccessValue, getStoreOrProfileLabel } from "./ChangeStoreAccessModal";
 import { ChangeCustomerNameModal } from "./ChangeCustomerNameModal";
 import { ManualPaymentModal } from "./ManualPaymentModal";
+import { NewOfferModal } from "./NewOfferModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { Check, X, Link as LinkIcon, MoreHorizontal, Info, Pencil, Plus } from "lucide-react";
@@ -37,6 +38,18 @@ const BUSINESS_ADDRESS_TITLES: Record<BusinessAddressType, string> = {
   invoice: "Invoice address"
 };
 
+const NEW_ADDRESS_TYPE_OPTIONS = [
+  { value: "delivery", label: "Delivery address" },
+  { value: "invoice", label: "Invoice address" }
+];
+
+const ADDRESS_COUNTRY_OPTIONS = [
+  { value: "Sweden", label: "Sweden" },
+  { value: "Norway", label: "Norway" },
+  { value: "Denmark", label: "Denmark" },
+  { value: "Finland", label: "Finland" }
+];
+
 const ORG_TYPE_OPTIONS = [
   { value: "Parent", label: "Parent" },
   { value: "Subsidiary", label: "Subsidiary" },
@@ -56,7 +69,7 @@ const mockCustomers = [
     address: "Fjellveien 2",
     postalCode: "7530",
     orgNumber: "",
-    customerGroup: "",
+    customerGroup: "Friends and family",
     inactive: false,
     creditC: "Yes",
     creditBalance: "1000",
@@ -189,7 +202,7 @@ const mockCustomers = [
     customerName: "Yngvild Granlie",
     customerSince: "2024-04-10",
     customerType: "Private customer",
-    store: "1",
+    store: "1001",
     address: "",
     postalCode: "",
     orgNumber: "",
@@ -445,6 +458,9 @@ export function CustomerDetail() {
     invoice: emptyAddress
   });
   const [editingAddressType, setEditingAddressType] = React.useState<BusinessAddressType | null>(null);
+  const [isAddingAddress, setIsAddingAddress] = React.useState(false);
+  const [newAddressType, setNewAddressType] = React.useState<"delivery" | "invoice">("delivery");
+  const [newAddressDraft, setNewAddressDraft] = React.useState<AddressFields>(emptyAddress);
 
   // Parse URL search params manually
   const searchParams = new URLSearchParams(location.search);
@@ -634,6 +650,8 @@ export function CustomerDetail() {
   };
 
   const displayCustomerName = customerNameOverride || customer.customerName;
+
+  const [isNewOfferModalOpen, setIsNewOfferModalOpen] = React.useState(false);
 
   // Initialize customer notes, falling back to any previously persisted value
   React.useEffect(() => {
@@ -965,6 +983,7 @@ export function CustomerDetail() {
     (window as any).customerType = customer.customerType;
     (window as any).hasCustomerCard = !!customerCard;
     (window as any).addCustomerCard = handleAddCustomerCard;
+    (window as any).openNewOfferModal = () => setIsNewOfferModalOpen(true);
 
     return () => {
       delete (window as any).isCustomerInactive;
@@ -978,6 +997,7 @@ export function CustomerDetail() {
       delete (window as any).customerType;
       delete (window as any).hasCustomerCard;
       delete (window as any).addCustomerCard;
+      delete (window as any).openNewOfferModal;
     };
   }, [isInactive, isBusinessCustomer, canDelete, customer.customerName, customerNameOverride, customer.customerType, creditCustomerDraft, creditLimit, creditBalance, referenceNumberRequired, creditLocked, balanceDueDate, customerCard]);
 
@@ -991,7 +1011,7 @@ export function CustomerDetail() {
   if (!isBusinessCustomer) {
     const privateTabLabels: Record<string, string> = {
       sales: "Sales",
-      offers: "Offers",
+      offers: "Discount",
       "customer-orders": "Customer orders"
     };
 
@@ -1001,7 +1021,7 @@ export function CustomerDetail() {
           {activeTab === "sales" ? (
             <SalesGrid />
           ) : activeTab === "offers" ? (
-            <OffersGrid />
+            <OffersGrid customerGroupName={customer.customerGroup} />
           ) : activeTab !== "details" ? (
             // Customer orders (placeholder) - same tab set as business customers
             <div className="p-[20px] flex-1 overflow-auto">
@@ -1342,6 +1362,12 @@ export function CustomerDetail() {
           onSubmit={handleManualPayment}
         />
 
+        <NewOfferModal
+          isOpen={isNewOfferModalOpen}
+          onClose={() => setIsNewOfferModalOpen(false)}
+          customerName={displayCustomerName}
+        />
+
         <DeactivatePrivateCustomerModal
           isOpen={isDeactivateModalOpen}
           onClose={() => setIsDeactivateModalOpen(false)}
@@ -1442,7 +1468,7 @@ export function CustomerDetail() {
   const businessTab = searchParams.get("tab") || "details";
   const businessTabLabels: Record<string, string> = {
     sales: "Sales",
-    offers: "Offers",
+    offers: "Discount",
     "customer-orders": "Customer orders"
   };
 
@@ -1474,7 +1500,7 @@ export function CustomerDetail() {
           {businessTab === "sales" ? (
             <SalesGrid isBusiness />
           ) : businessTab === "offers" ? (
-            <OffersGrid />
+            <OffersGrid customerGroupName={customer.customerGroup} />
           ) : businessTab !== "details" ? (
             <div className="bg-white border border-[#E5E7EB] rounded-xl p-8">
               <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666]">
@@ -1710,15 +1736,73 @@ export function CustomerDetail() {
                       )}
                       {[businessAddresses.delivery.addressLine1, businessAddresses.invoice.addressLine1].filter(Boolean).length === 1 && (
                         <Card className={DETAIL_CARD_CLASS}>
-                          <CardContent className="p-8 h-full flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => setEditingAddressType(businessAddresses.delivery.addressLine1 ? "invoice" : "delivery")}
-                              className="h-[36px] px-[20px] rounded-full border border-[#ccc] flex items-center gap-[8px] hover:bg-[#f5f5f5] cursor-pointer"
-                            >
-                              <Plus className="size-[16px] text-[#1a1a1a]" />
-                              <span className="font-['Roboto_Condensed:Bold',sans-serif] text-[15px] text-[#1a1a1a]">Add address</span>
-                            </button>
+                          <CardContent className="p-8">
+                            {isAddingAddress ? (
+                              <div className="flex-1 min-w-[200px]">
+                                <SectionHeader className="mb-[10px]">New address</SectionHeader>
+                                <SelectField
+                                  compact
+                                  required
+                                  label="Address type"
+                                  value={newAddressType}
+                                  options={
+                                    businessAddresses.delivery.addressLine1
+                                      ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "invoice")
+                                      : businessAddresses.invoice.addressLine1
+                                      ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "delivery")
+                                      : NEW_ADDRESS_TYPE_OPTIONS
+                                  }
+                                  onChange={(v) => setNewAddressType(v as "delivery" | "invoice")}
+                                  hideBlankOption
+                                />
+                                <InputField compact required label="Address line 1" value={newAddressDraft.addressLine1} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine1: v }))} />
+                                <InputField compact label="Address line 2" value={newAddressDraft.addressLine2} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine2: v }))} />
+                                <InputField compact required label="Postal code" value={newAddressDraft.postalCode} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, postalCode: v }))} />
+                                <InputField compact required label="City" value={newAddressDraft.city} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, city: v }))} />
+                                <SelectField compact required label="Country" value={newAddressDraft.country} options={ADDRESS_COUNTRY_OPTIONS} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, country: v }))} />
+                                <div className="flex items-center gap-[8px] mt-[16px]">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleSaveBusinessAddress(newAddressType, newAddressDraft);
+                                      setIsAddingAddress(false);
+                                      setNewAddressDraft(emptyAddress);
+                                    }}
+                                    className="bg-[#1c7862] h-[30px] px-[16px] rounded-[33554400px] border border-[#1c7862] hover:bg-[#248E73] hover:border-[#248E73] transition-colors cursor-pointer"
+                                  >
+                                    <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[13px] text-center text-white uppercase">
+                                      Save
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsAddingAddress(false);
+                                      setNewAddressDraft(emptyAddress);
+                                    }}
+                                    className="bg-[#eaeaea] h-[30px] px-[16px] rounded-[33554400px] hover:bg-[#e0e0e0] transition-colors cursor-pointer"
+                                  >
+                                    <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[#1a1a1a] text-[13px] text-center uppercase">
+                                      Cancel
+                                    </span>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="h-full flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNewAddressType(businessAddresses.delivery.addressLine1 ? "invoice" : "delivery");
+                                    setIsAddingAddress(true);
+                                  }}
+                                  className="h-[36px] px-[20px] rounded-full border border-[#ccc] flex items-center gap-[8px] hover:bg-[#f5f5f5] cursor-pointer"
+                                >
+                                  <Plus className="size-[16px] text-[#1a1a1a]" />
+                                  <span className="font-['Roboto_Condensed:Bold',sans-serif] text-[15px] text-[#1a1a1a]">Add address</span>
+                                </button>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       )}
@@ -1850,6 +1934,12 @@ export function CustomerDetail() {
         isOpen={isManualPaymentModalOpen}
         onClose={() => setIsManualPaymentModalOpen(false)}
         onSubmit={handleManualPayment}
+      />
+
+      <NewOfferModal
+        isOpen={isNewOfferModalOpen}
+        onClose={() => setIsNewOfferModalOpen(false)}
+        customerName={displayCustomerName}
       />
 
       {editingAddressType && (

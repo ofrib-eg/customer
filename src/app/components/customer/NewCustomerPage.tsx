@@ -15,13 +15,6 @@ import { mockContacts } from "./ContactsGrid";
 import { loadNewContacts } from "./newContacts";
 import { saveNewCustomer, getNextCustomerId, formatCustomerNumber, randomExtCustomerNumber, loadNewCustomers, StoredCustomer } from "./newCustomers";
 
-const LOYALTY_PROGRAM_OPTIONS = [
-  { value: "standard", label: "Standard" },
-  { value: "silver", label: "Silver" },
-  { value: "gold", label: "Gold" },
-  { value: "platinum", label: "Platinum" }
-];
-
 const ORG_TYPE_OPTIONS = [
   { value: "Parent", label: "Parent" },
   { value: "Subsidiary", label: "Subsidiary" },
@@ -101,12 +94,14 @@ export function NewCustomerPage() {
   const navigate = useNavigate();
   const [customerType, setCustomerType] = React.useState<"Private customer" | "Business customer">("Private customer");
   const [linkedContact, setLinkedContact] = React.useState<LinkedContact | null>(null);
+  const [isEditingLinkedContact, setIsEditingLinkedContact] = React.useState(false);
   const [contactDraft, setContactDraft] = React.useState(emptyContactDraft());
   const [focusedIdentifierField, setFocusedIdentifierField] = React.useState<"phone" | "email" | "ssn" | null>(null);
   const [showIdentifierError, setShowIdentifierError] = React.useState(false);
   const identifierSectionRef = React.useRef<HTMLDivElement>(null);
   const [storeAccess, setStoreAccess] = React.useState<StoreAccessValue>({ type: "all", profileId: "", teamId: "", storeIds: [] });
-  const [loyaltyProgram, setLoyaltyProgram] = React.useState(LOYALTY_PROGRAM_OPTIONS[0].value);
+  // Coop-specific: new private customers always get the "Default" loyalty program, shown read-only.
+  const [loyaltyProgram] = React.useState("Default");
   const [privateCustomerGroup, setPrivateCustomerGroup] = React.useState("");
   const [isCreditCustomer, setIsCreditCustomer] = React.useState(false);
   const [creditLimit, setCreditLimit] = React.useState("0");
@@ -375,6 +370,7 @@ export function NewCustomerPage() {
         extCustomerNumber: randomExtCustomerNumber(),
         customerName: `${contact.firstName} ${contact.lastName}`.trim(),
         customerType: "Private customer",
+        customerSince: new Date().toISOString().slice(0, 10),
         store: "",
         address: contact.addressLine1,
         postalCode: contact.postalCode,
@@ -393,7 +389,7 @@ export function NewCustomerPage() {
         ssn: contact.ssn,
         extIdentityNumber: contact.extIdentityNumber,
         loyaltyProgramName: contact.loyaltyProgramName,
-        loyaltyProgram,
+        loyaltyProgram: loyaltyProgram || undefined,
         isCreditCustomer,
         creditLimit: isCreditCustomer ? creditLimit : undefined,
         referenceNumberRequired: isCreditCustomer ? referenceNumberRequired : undefined,
@@ -423,6 +419,7 @@ export function NewCustomerPage() {
         extCustomerNumber: randomExtCustomerNumber(),
         customerName: name,
         customerType: "Business customer",
+        customerSince: new Date().toISOString().slice(0, 10),
         store: "",
         address: orgAddress,
         postalCode: orgPostalCode,
@@ -598,14 +595,14 @@ export function NewCustomerPage() {
                                 </div>
                               )}
 
-                              <div className="flex flex-col @md:flex-row items-start justify-between gap-x-8 gap-y-6 mt-[8px]">
-                                <div className="w-[240px] shrink-0">
+                              <div className="flex flex-col @4xl:flex-row items-start justify-between gap-x-8 gap-y-6 mt-[8px]">
+                                <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                                   <InputField required label="Org. name" value={newOrgName} onChange={setNewOrgName} />
                                   <InputField required label="Org. number" value={newOrgNumber} onChange={setNewOrgNumber} />
                                   <SelectField required label="Country" value={newOrgCountry} options={COUNTRY_OPTIONS} onChange={setNewOrgCountry} />
                                 </div>
 
-                                <div className="w-[240px] shrink-0">
+                                <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                                   <SelectField label="Organization type" value={newOrgType} options={ORG_TYPE_OPTIONS} onChange={setNewOrgType} />
                                   {showOrgBranchNumber ? (
                                     <InputField label="Branch number" value={newOrgBranchNumber} onChange={setNewOrgBranchNumber} />
@@ -620,7 +617,7 @@ export function NewCustomerPage() {
                                   )}
                                 </div>
 
-                                <div className="w-[240px] shrink-0">
+                                <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                                   <FieldLabel>Phone number</FieldLabel>
                                   <div className="flex gap-[6px] mb-[16px]">
                                     <PhoneCountryCodeSelect />
@@ -655,18 +652,18 @@ export function NewCustomerPage() {
                             </div>
                           )}
 
-                          <div className="flex flex-col @md:flex-row items-start justify-between gap-x-8 gap-y-6 mt-[8px]">
-                            <div className="w-[240px] shrink-0">
+                          <div className="flex flex-col @4xl:flex-row items-start justify-between gap-x-8 gap-y-6 mt-[8px]">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <ReadOnlyField compact label="Organisation name" value={linkedOrganization.orgName} valueClassName="underline" />
                               <ReadOnlyField compact label="Organisation number" value={linkedOrganization.orgNr} />
                               <ReadOnlyField compact label="Country" value={linkedOrganization.country} />
                             </div>
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <ReadOnlyField compact label="Organization type" value={linkedOrganization.organizationType || "–"} />
                               <ReadOnlyField compact hideIfEmpty label="Branch number" value={linkedOrganization.branchNumber || ""} />
                               <ReadOnlyField compact hideIfEmpty label="Duns number" value={linkedOrganization.dunsNumber || ""} />
                             </div>
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <FieldLabel>Phone number</FieldLabel>
                               <div className="flex gap-[6px] mb-[16px]">
                                 <PhoneCountryCodeSelect />
@@ -706,9 +703,28 @@ export function NewCustomerPage() {
 
                           <div className="border-t border-[#E5E7EB] mb-[16px]" />
 
-                          <div className="flex items-start justify-between gap-[16px]">
-                            <div className="flex flex-col @md:flex-row items-start justify-between gap-x-8 gap-y-6 flex-1">
-                            <div className="w-[240px] shrink-0">
+                          <div className="flex justify-end mb-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isEditingInternalOrg) {
+                                  setNewOrgName(linkedOrganization.orgName);
+                                  setNewOrgNumber(linkedOrganization.orgNr);
+                                  setNewOrgCountry(linkedOrganization.country);
+                                  setNewOrgType(linkedOrganization.organizationType || ORG_TYPE_OPTIONS[0].value);
+                                  setNewOrgBranchNumber(linkedOrganization.branchNumber || "");
+                                }
+                                setIsEditingInternalOrg((prev) => !prev);
+                              }}
+                              className="-mt-[3px] -mr-[3px] size-[36px] rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer shrink-0 transition-colors"
+                              aria-label="Edit organization details"
+                            >
+                              <Pencil className="size-[16px] text-[#1a1a1a]" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-col @4xl:flex-row items-start justify-between gap-x-8 gap-y-6">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               {isEditingInternalOrg ? (
                                 <>
                                   <InputField label="Organisation name" value={newOrgName} onChange={setNewOrgName} />
@@ -724,7 +740,7 @@ export function NewCustomerPage() {
                               )}
                             </div>
 
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               {isEditingInternalOrg ? (
                                 <>
                                   <SelectField label="Organization type" value={newOrgType} options={ORG_TYPE_OPTIONS} onChange={setNewOrgType} />
@@ -738,7 +754,7 @@ export function NewCustomerPage() {
                               )}
                             </div>
 
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <FieldLabel>Phone number</FieldLabel>
                               <div className="flex gap-[6px] mb-[16px]">
                                 <PhoneCountryCodeSelect />
@@ -751,25 +767,6 @@ export function NewCustomerPage() {
                               </div>
                               <InputField label="Email" value={newOrgEmail} onChange={setNewOrgEmail} />
                             </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!isEditingInternalOrg) {
-                                  setNewOrgName(linkedOrganization.orgName);
-                                  setNewOrgNumber(linkedOrganization.orgNr);
-                                  setNewOrgCountry(linkedOrganization.country);
-                                  setNewOrgType(linkedOrganization.organizationType || ORG_TYPE_OPTIONS[0].value);
-                                  setNewOrgBranchNumber(linkedOrganization.branchNumber || "");
-                                }
-                                setIsEditingInternalOrg((prev) => !prev);
-                              }}
-                              className="size-[36px] rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer shrink-0 transition-colors"
-                              aria-label="Edit organization details"
-                            >
-                              <Pencil className="size-[16px] text-[#1a1a1a]" />
-                            </button>
                           </div>
                         </>
                       )}
@@ -958,7 +955,7 @@ export function NewCustomerPage() {
                         <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-x-8">
                           <div>
                             <InputField compact label="Credit limit" value={creditLimit} onChange={setCreditLimit} />
-                            <InputField compact label="Credit balance" value={creditBalance} onChange={setCreditBalance} />
+                            <ReadOnlyField compact label="Credit balance" value={creditBalance} />
                           </div>
                           <div>
                             <CheckboxField compact label="Reference number required" checked={referenceNumberRequired} onChange={setReferenceNumberRequired} />
@@ -1029,8 +1026,8 @@ export function NewCustomerPage() {
 
                           <div className="border-t border-[#E5E7EB] mb-[32px]" />
 
-                          <div className="flex flex-col @md:flex-row items-start justify-between gap-x-8 gap-y-6">
-                            <div className="w-[240px] shrink-0" ref={identifierSectionRef}>
+                          <div className="flex flex-col @4xl:flex-row items-start justify-between gap-x-8 gap-y-6">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0" ref={identifierSectionRef}>
                               <FieldLabel>Phone number</FieldLabel>
                               <div className="relative" onFocus={() => setFocusedIdentifierField("phone")} onBlur={() => setFocusedIdentifierField(null)}>
                                 <div className="flex gap-[6px] mb-[16px]">
@@ -1050,7 +1047,7 @@ export function NewCustomerPage() {
                                 )}
                               </div>
                               {contactDraft.showPhoneNumber2 ? (
-                                <div className="flex gap-[6px] mb-[16px]">
+                                <div className="flex gap-[6px] mb-[16px] items-center">
                                   <PhoneCountryCodeSelect />
                                   <input
                                     type="text"
@@ -1058,6 +1055,14 @@ export function NewCustomerPage() {
                                     onChange={(e) => updateContactDraft("phoneNumber2")(e.target.value)}
                                     className="flex-1 h-[32px] px-[10px] border border-[#CCCCCC] font-['Roboto:Regular',sans-serif] text-[14px] text-[#1a1a1a] focus:outline-none focus:border-[#1c7862]"
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={() => setContactDraft((prev) => ({ ...prev, showPhoneNumber2: false, phoneNumber2: "" }))}
+                                    className="size-[32px] shrink-0 rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+                                    aria-label="Remove phone number"
+                                  >
+                                    <X className="size-[16px] text-[#1a1a1a]" />
+                                  </button>
                                 </div>
                               ) : (
                                 <button
@@ -1089,17 +1094,18 @@ export function NewCustomerPage() {
                               {showIdentifierError && !hasContactIdentifier && (
                                 <p className="font-['Roboto:Regular',sans-serif] text-[13px] text-[#D32F2F] mb-[16px]">* One identifier is required</p>
                               )}
-                              <SelectField label="Loyalty program name" value={loyaltyProgram} options={LOYALTY_PROGRAM_OPTIONS} onChange={setLoyaltyProgram} hideBlankOption />
+                              {/* Coop-specific: read-only, always "Default" for new private customers */}
+                              <ReadOnlyField compact label="Loyalty program name" value={loyaltyProgram} />
                             </div>
 
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <InputField required label="First name" value={contactDraft.firstName} onChange={updateContactDraft("firstName")} />
                               <InputField required label="Last name" value={contactDraft.lastName} onChange={updateContactDraft("lastName")} />
                               <DateField label="Birth date" value={contactDraft.birthDate} onChange={updateContactDraft("birthDate")} />
                               <SelectField label="Gender" value={contactDraft.gender} options={GENDER_OPTIONS} onChange={updateContactDraft("gender")} />
                             </div>
 
-                            <div className="w-[240px] shrink-0">
+                            <div className="w-full @4xl:w-[240px] @6xl:w-[280px] shrink-0">
                               <InputField label="Address" value={contactDraft.addressLine1} onChange={updateContactDraft("addressLine1")} />
                               {contactDraft.showAddressLine2 ? (
                                 <InputField label="Address line 2" value={contactDraft.addressLine2} onChange={updateContactDraft("addressLine2")} />
@@ -1142,8 +1148,30 @@ export function NewCustomerPage() {
                               <X className="size-[16px]" />
                             </button>
                           </div>
+
+                          {isEditingLinkedContact && (
+                            <div className="mb-[16px] p-[16px] bg-white border border-[#999] rounded-[8px] flex items-start gap-[10px]">
+                              <Info className="size-[18px] text-[#1a1a1a] shrink-0" />
+                              <p className="font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a]">
+                                Changes made here will also update the contact register.
+                              </p>
+                            </div>
+                          )}
+
                           <div className="border-t border-[#E5E7EB] mb-[16px]" />
-                          <SectionHeader>Contact</SectionHeader>
+
+                          <div className="flex items-start justify-between gap-[16px]">
+                            <SectionHeader>Contact</SectionHeader>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingLinkedContact((prev) => !prev)}
+                              className="-mt-[3px] -mr-[3px] size-[36px] rounded-full flex items-center justify-center hover:bg-[#f5f5f5] cursor-pointer shrink-0 transition-colors"
+                              aria-label="Edit contact details"
+                            >
+                              <Pencil className="size-[16px] text-[#1a1a1a]" />
+                            </button>
+                          </div>
+
                           <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
                           <div className="w-full @md:w-[260px]">
                             <ReadOnlyField compact label="Identity number" value={linkedContact.identityNumber} />
@@ -1151,15 +1179,36 @@ export function NewCustomerPage() {
                             <ReadOnlyField compact label="Loyalty program name" value={linkedContact.loyaltyProgramName} />
                           </div>
                           <div className="w-full @md:w-[260px]">
-                            <ReadOnlyField compact label="First name" value={linkedContact.firstName} />
-                            <ReadOnlyField compact label="Last name" value={linkedContact.lastName} />
-                            <ReadOnlyField compact label="Birth date" value={linkedContact.birthDate} />
-                            <ReadOnlyField compact label="Gender" value={linkedContact.gender} />
+                            {isEditingLinkedContact ? (
+                              <>
+                                <InputField compact label="First name" value={linkedContact.firstName} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, firstName: v })} />
+                                <InputField compact label="Last name" value={linkedContact.lastName} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, lastName: v })} />
+                                <DateField compact label="Birth date" value={linkedContact.birthDate} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, birthDate: v })} />
+                                <SelectField compact label="Gender" value={linkedContact.gender} options={GENDER_OPTIONS} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, gender: v })} />
+                              </>
+                            ) : (
+                              <>
+                                <ReadOnlyField compact label="First name" value={linkedContact.firstName} />
+                                <ReadOnlyField compact label="Last name" value={linkedContact.lastName} />
+                                <ReadOnlyField compact label="Birth date" value={linkedContact.birthDate} />
+                                <ReadOnlyField compact label="Gender" value={linkedContact.gender} />
+                              </>
+                            )}
                           </div>
                           <div className="w-full @md:w-[260px]">
-                            <ReadOnlyField compact label="Email" value={linkedContact.email} />
-                            <ReadOnlyField compact label="Mobile number" value={linkedContact.mobileNumber} />
-                            <ReadOnlyField compact label="SSN" value={linkedContact.ssn} />
+                            {isEditingLinkedContact ? (
+                              <>
+                                <InputField compact label="Email" value={linkedContact.email} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, email: v })} />
+                                <InputField compact label="Mobile number" value={linkedContact.mobileNumber} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, mobileNumber: v })} />
+                                <InputField compact label="SSN" value={linkedContact.ssn} onChange={(v) => setLinkedContact((prev) => prev && { ...prev, ssn: v })} />
+                              </>
+                            ) : (
+                              <>
+                                <ReadOnlyField compact label="Email" value={linkedContact.email} />
+                                <ReadOnlyField compact label="Mobile number" value={linkedContact.mobileNumber} />
+                                <ReadOnlyField compact label="SSN" value={linkedContact.ssn} />
+                              </>
+                            )}
                           </div>
                           </div>
                         </div>
@@ -1174,7 +1223,7 @@ export function NewCustomerPage() {
                         <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-x-8">
                           <div>
                             <InputField compact label="Credit limit" value={creditLimit} onChange={setCreditLimit} />
-                            <InputField compact label="Credit balance" value={creditBalance} onChange={setCreditBalance} />
+                            <ReadOnlyField compact label="Credit balance" value={creditBalance} />
                           </div>
                           <div>
                             <CheckboxField compact label="Reference number required" checked={referenceNumberRequired} onChange={setReferenceNumberRequired} />

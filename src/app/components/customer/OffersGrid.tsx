@@ -2,6 +2,8 @@ import React from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router";
+import svgPathsMain from "@/imports/svg-16ystvll8u";
+import { FilterMenu } from "@/app/components/FilterMenu";
 import { Calendar } from "../ui/calendar";
 import { mockOffers, Offer, OfferScope, OfferStatus } from "./offersTypes";
 import { OfferDrawer } from "./OfferDrawer";
@@ -112,27 +114,40 @@ function MultiSelectFilter<T extends string>({
   );
 }
 
-export function OffersGrid() {
+export function OffersGrid({ customerGroupName }: { customerGroupName?: string } = {}) {
   const [promotionNameFilter, setPromotionNameFilter] = React.useState("");
   const [offerNameFilter, setOfferNameFilter] = React.useState("");
+  const [offerIdFilter, setOfferIdFilter] = React.useState("");
   const [validFromFilter, setValidFromFilter] = React.useState("");
   const [validToFilter, setValidToFilter] = React.useState("");
   const [scopeFilter, setScopeFilter] = React.useState<OfferScope[]>([]);
   const [statusFilter, setStatusFilter] = React.useState<OfferStatus[]>(DEFAULT_STATUS_FILTER);
   const [selectedOffer, setSelectedOffer] = React.useState<Offer | null>(null);
+  const [filterModes, setFilterModes] = React.useState<Record<string, string>>({});
+  const [openMenuColumn, setOpenMenuColumn] = React.useState<string | null>(null);
   const navigate = useNavigate();
+
+  const matchesFilterMode = (value: string, filterValue: string, mode: string) => {
+    const v = value.toLowerCase();
+    const f = filterValue.toLowerCase();
+    if (mode === "Is equal to") return v === f;
+    if (mode === "Starts with") return v.startsWith(f);
+    return v.includes(f);
+  };
 
   const filteredOffers = React.useMemo(() => {
     return mockOffers.filter((offer) => {
+      if (offer.scope === "Customer group" && !customerGroupName) return false;
       if (statusFilter.length > 0 && !statusFilter.includes(offer.status)) return false;
-      if (promotionNameFilter && !offer.promotionName.toLowerCase().includes(promotionNameFilter.toLowerCase())) return false;
-      if (offerNameFilter && !offer.offerName.toLowerCase().includes(offerNameFilter.toLowerCase())) return false;
+      if (promotionNameFilter && !matchesFilterMode(offer.promotionName, promotionNameFilter, filterModes.promotionName || "Contains")) return false;
+      if (offerNameFilter && !matchesFilterMode(offer.offerName, offerNameFilter, filterModes.offerName || "Contains")) return false;
+      if (offerIdFilter && !matchesFilterMode(offer.id, offerIdFilter, filterModes.offerId || "Contains")) return false;
       if (validFromFilter && offer.validFrom !== validFromFilter) return false;
       if (validToFilter && offer.validTo !== validToFilter) return false;
       if (scopeFilter.length > 0 && !scopeFilter.includes(offer.scope)) return false;
       return true;
     });
-  }, [statusFilter, promotionNameFilter, offerNameFilter, validFromFilter, validToFilter, scopeFilter]);
+  }, [customerGroupName, statusFilter, promotionNameFilter, offerNameFilter, offerIdFilter, validFromFilter, validToFilter, scopeFilter, filterModes]);
 
   return (
     <div className="flex-1 flex overflow-hidden min-h-0">
@@ -163,19 +178,71 @@ export function OffersGrid() {
                     style={{ width: col.width, minWidth: col.width }}
                   >
                     {col.id === "promotionName" ? (
-                      <input
-                        type="text"
-                        value={promotionNameFilter}
-                        onChange={(e) => setPromotionNameFilter(e.target.value)}
-                        className="w-full h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
-                      />
+                      <div className="flex items-center gap-1 h-full">
+                        <input
+                          type="text"
+                          value={promotionNameFilter}
+                          onChange={(e) => setPromotionNameFilter(e.target.value)}
+                          className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                        />
+                        <FilterMenu
+                          isOpen={openMenuColumn === col.id}
+                          onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                          activeOption={filterModes[col.id] || "Contains"}
+                          onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                          trigger={
+                            <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                              <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                                <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                              </svg>
+                            </button>
+                          }
+                        />
+                      </div>
                     ) : col.id === "offerName" ? (
-                      <input
-                        type="text"
-                        value={offerNameFilter}
-                        onChange={(e) => setOfferNameFilter(e.target.value)}
-                        className="w-full h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
-                      />
+                      <div className="flex items-center gap-1 h-full">
+                        <input
+                          type="text"
+                          value={offerNameFilter}
+                          onChange={(e) => setOfferNameFilter(e.target.value)}
+                          className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                        />
+                        <FilterMenu
+                          isOpen={openMenuColumn === col.id}
+                          onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                          activeOption={filterModes[col.id] || "Contains"}
+                          onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                          trigger={
+                            <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                              <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                                <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                              </svg>
+                            </button>
+                          }
+                        />
+                      </div>
+                    ) : col.id === "offerId" ? (
+                      <div className="flex items-center gap-1 h-full">
+                        <input
+                          type="text"
+                          value={offerIdFilter}
+                          onChange={(e) => setOfferIdFilter(e.target.value)}
+                          className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                        />
+                        <FilterMenu
+                          isOpen={openMenuColumn === col.id}
+                          onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                          activeOption={filterModes[col.id] || "Contains"}
+                          onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                          trigger={
+                            <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                              <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                                <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                              </svg>
+                            </button>
+                          }
+                        />
+                      </div>
                     ) : col.id === "validFrom" ? (
                       <DateFilter value={validFromFilter} onChange={setValidFromFilter} />
                     ) : col.id === "validTo" ? (
@@ -234,7 +301,13 @@ export function OffersGrid() {
                           ) : col.id === "status" ? (
                             <span className="truncate block">{offer.status}</span>
                           ) : col.id === "scope" ? (
-                            <span className="truncate block">{offer.scope}</span>
+                            <span className="truncate block">
+                              {offer.scope === "Customer group"
+                                ? customerGroupName
+                                  ? `${customerGroupName} discount`
+                                  : offer.scope
+                                : "Customer specific discount"}
+                            </span>
                           ) : null}
                         </td>
                       ))}

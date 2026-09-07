@@ -475,7 +475,7 @@ export function Header({
             {[
               { key: "details", label: "Details" },
               { key: "sales", label: "Sales" },
-              { key: "offers", label: "Offers" },
+              { key: "offers", label: "Discount" },
               { key: "customer-orders", label: "Customer orders" },
             ].map((tab) => {
               const isActive = (searchParams.get("tab") || "details") === tab.key;

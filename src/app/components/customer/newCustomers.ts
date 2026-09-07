@@ -4,6 +4,7 @@ export interface StoredCustomer {
   extCustomerNumber: string;
   customerName: string;
   customerType: string;
+  customerSince: string;
   store: string;
   address: string;
   postalCode: string;

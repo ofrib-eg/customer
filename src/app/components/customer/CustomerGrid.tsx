@@ -5,7 +5,7 @@ import { FilterMenu } from "@/app/components/FilterMenu";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { Check, X } from "lucide-react";
 import { loadNewCustomers } from "./newCustomers";
-import { getStoreOrProfileLabel } from "./ChangeStoreAccessModal";
+import { getStoreGroupLabel } from "./ChangeStoreAccessModal";
 
 export const mockCustomers = [
   {
@@ -35,7 +35,7 @@ export const mockCustomers = [
     address: "Fjellveien 2",
     postalCode: "7530",
     orgNumber: "",
-    customerGroup: "",
+    customerGroup: "Friends and family",
     inactive: false,
     creditC: "Yes",
     creditBalance: "1000",
@@ -133,7 +133,7 @@ export const mockCustomers = [
     extCustomerNumber: "528374",
     customerName: "Yngvild Granlie",
     customerType: "Private customer",
-    store: "1",
+    store: "1001",
     address: "",
     postalCode: "",
     orgNumber: "",
@@ -220,7 +220,7 @@ const defaultColumns = [
   { id: "extCustomerNumber", label: "EXT. CUSTOMER NUMBER", width: 200, sticky: true },
   { id: "customerName", label: "CUSTOMER NAME", width: 200, sticky: true },
   { id: "customerType", label: "CUSTOMER TYPE", width: 160 },
-  { id: "store", label: "STORE", width: 100 },
+  { id: "store", label: "STORE GROUP", width: 160 },
   { id: "address", label: "ADDRESS", width: 180 },
   { id: "postalCode", label: "POSTAL CODE", width: 120 },
   { id: "orgNumber", label: "ORG. NUMBER", width: 140 },
@@ -290,7 +290,11 @@ export function CustomerGrid() {
   }, []);
 
   const filteredData = useMemo(() => {
-    return [...mockCustomers, ...loadNewCustomers()]
+    const mockIds = new Set(mockCustomers.map((c) => c.id));
+    // Local demo data can go stale and collide with a mock customer's id after the mock data changes;
+    // drop those so a stale local record can never shadow/corrupt a real mock row.
+    const newCustomers = loadNewCustomers().filter((c) => !mockIds.has(c.id));
+    return [...mockCustomers, ...newCustomers]
       .filter((customer) => !deletedCustomerIds.has(customer.id)) // Filter out deleted customers
       .filter((customer) => {
         return Object.keys(filters).every((key) => {
@@ -376,6 +380,16 @@ export function CustomerGrid() {
                             <option value="false">Active</option>
                             <option value="true">Inactive</option>
                           </select>
+                        ) : col.id === "customerType" ? (
+                          <select
+                            className="w-full h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A] cursor-pointer"
+                            value={filters[col.id] || ""}
+                            onChange={(e) => setFilters({ ...filters, [col.id]: e.target.value })}
+                          >
+                            <option value="">All</option>
+                            <option value="Business customer">Business customer</option>
+                            <option value="Private customer">Private customer</option>
+                          </select>
                         ) : (
                           <input
                             type="text"
@@ -399,7 +413,7 @@ export function CustomerGrid() {
                           />
                         )}
                       </div>
-                      {col.id !== "inactive" && (
+                      {col.id !== "inactive" && col.id !== "customerType" && (
                         <FilterMenu
                           isOpen={openMenuColumn === col.id}
                           onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
@@ -497,7 +511,7 @@ export function CustomerGrid() {
                           ) : col.id === "customerNumber" ? (
                             <span className="truncate block text-[#1A1A1A] underline">{customer[col.id as keyof typeof customer]}</span>
                           ) : col.id === "store" ? (
-                            <span className="truncate block">{getStoreOrProfileLabel(customer.store)}</span>
+                            <span className="truncate block">{getStoreGroupLabel(customer)}</span>
                           ) : (
                             <span className="truncate block">{customer[col.id as keyof typeof customer]}</span>
                           )}

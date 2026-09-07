@@ -1,6 +1,8 @@
 import React from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import svgPathsMain from "@/imports/svg-16ystvll8u";
+import { FilterMenu } from "@/app/components/FilterMenu";
 import { Calendar } from "../ui/calendar";
 import { mockReceipts, Receipt, PaymentType } from "./salesTypes";
 import { ReceiptDrawer } from "./ReceiptDrawer";
@@ -122,21 +124,37 @@ export function SalesGrid({ isBusiness = false }: { isBusiness?: boolean }) {
   const [storeNameFilter, setStoreNameFilter] = React.useState("");
   const [dateFilter, setDateFilter] = React.useState("");
   const [receiptNumberFilter, setReceiptNumberFilter] = React.useState("");
+  const [amountFilter, setAmountFilter] = React.useState("");
   const [paymentTypeFilter, setPaymentTypeFilter] = React.useState<PaymentType[]>([]);
+  const [contactNameFilter, setContactNameFilter] = React.useState("");
+  const [contactIdentifierFilter, setContactIdentifierFilter] = React.useState("");
   const [selectedReceipt, setSelectedReceipt] = React.useState<Receipt | null>(null);
+  const [filterModes, setFilterModes] = React.useState<Record<string, string>>({});
+  const [openMenuColumn, setOpenMenuColumn] = React.useState<string | null>(null);
 
   const columns = React.useMemo(() => getColumns(isBusiness), [isBusiness]);
 
+  const matchesFilterMode = (value: string, filterValue: string, mode: string) => {
+    const v = value.toLowerCase();
+    const f = filterValue.toLowerCase();
+    if (mode === "Is equal to") return v === f;
+    if (mode === "Starts with") return v.startsWith(f);
+    return v.includes(f);
+  };
+
   const filteredReceipts = React.useMemo(() => {
     return mockReceipts.filter((receipt) => {
-      if (storeNumberFilter && !receipt.storeNumber.includes(storeNumberFilter)) return false;
-      if (storeNameFilter && !receipt.storeName.toLowerCase().includes(storeNameFilter.toLowerCase())) return false;
+      if (storeNumberFilter && !matchesFilterMode(receipt.storeNumber, storeNumberFilter, filterModes.storeNumber || "Contains")) return false;
+      if (storeNameFilter && !matchesFilterMode(receipt.storeName, storeNameFilter, filterModes.storeName || "Contains")) return false;
       if (dateFilter && receipt.receiptDate !== dateFilter) return false;
-      if (receiptNumberFilter && !receipt.receiptNumber.toLowerCase().includes(receiptNumberFilter.toLowerCase())) return false;
+      if (receiptNumberFilter && !matchesFilterMode(receipt.receiptNumber, receiptNumberFilter, filterModes.receiptNumber || "Contains")) return false;
+      if (amountFilter && !matchesFilterMode(receipt.total.toFixed(2), amountFilter, filterModes.amount || "Contains")) return false;
       if (paymentTypeFilter.length > 0 && !paymentTypeFilter.includes(receipt.paymentType)) return false;
+      if (contactNameFilter && !matchesFilterMode(receipt.contactName || "", contactNameFilter, filterModes.contactName || "Contains")) return false;
+      if (contactIdentifierFilter && !matchesFilterMode(receipt.contactIdentifier || "", contactIdentifierFilter, filterModes.contactIdentifier || "Contains")) return false;
       return true;
     });
-  }, [storeNumberFilter, storeNameFilter, dateFilter, receiptNumberFilter, paymentTypeFilter]);
+  }, [storeNumberFilter, storeNameFilter, dateFilter, receiptNumberFilter, amountFilter, paymentTypeFilter, contactNameFilter, contactIdentifierFilter, filterModes]);
 
   return (
     <div className="flex-1 flex overflow-hidden min-h-0">
@@ -167,36 +185,141 @@ export function SalesGrid({ isBusiness = false }: { isBusiness?: boolean }) {
                   style={{ width: col.width, minWidth: col.width }}
                 >
                   {col.id === "storeNumber" ? (
-                    <input
-                      type="number"
-                      value={storeNumberFilter}
-                      onChange={(e) => setStoreNumberFilter(e.target.value)}
-                      className="w-full h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
-                    />
+                    <div className="flex items-center gap-1 h-full">
+                      <input
+                        type="number"
+                        value={storeNumberFilter}
+                        onChange={(e) => setStoreNumberFilter(e.target.value)}
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                      />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
+                    </div>
                   ) : col.id === "storeName" ? (
-                    <div className="relative">
+                    <div className="flex items-center gap-1 h-full">
                       <input
                         type="text"
                         value={storeNameFilter}
                         onChange={(e) => setStoreNameFilter(e.target.value)}
-                        className="w-full h-[30px] bg-white border border-[#CCCCCC] pl-2 pr-[26px] text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
                       />
-                      <Search className="absolute right-[8px] top-1/2 -translate-y-1/2 size-[14px] text-[#666] pointer-events-none" />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
                     </div>
                   ) : col.id === "receiptDate" ? (
                     <DateFilter value={dateFilter} onChange={setDateFilter} />
                   ) : col.id === "receiptNumber" ? (
-                    <div className="relative">
+                    <div className="flex items-center gap-1 h-full">
                       <input
                         type="text"
                         value={receiptNumberFilter}
                         onChange={(e) => setReceiptNumberFilter(e.target.value)}
-                        className="w-full h-[30px] bg-white border border-[#CCCCCC] pl-2 pr-[26px] text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
                       />
-                      <Search className="absolute right-[8px] top-1/2 -translate-y-1/2 size-[14px] text-[#666] pointer-events-none" />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
+                    </div>
+                  ) : col.id === "amount" ? (
+                    <div className="flex items-center gap-1 h-full">
+                      <input
+                        type="text"
+                        value={amountFilter}
+                        onChange={(e) => setAmountFilter(e.target.value)}
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                      />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
                     </div>
                   ) : col.id === "paymentType" ? (
                     <PaymentTypeFilter selected={paymentTypeFilter} onChange={setPaymentTypeFilter} />
+                  ) : col.id === "contactName" ? (
+                    <div className="flex items-center gap-1 h-full">
+                      <input
+                        type="text"
+                        value={contactNameFilter}
+                        onChange={(e) => setContactNameFilter(e.target.value)}
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                      />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
+                    </div>
+                  ) : col.id === "contactIdentifier" ? (
+                    <div className="flex items-center gap-1 h-full">
+                      <input
+                        type="text"
+                        value={contactIdentifierFilter}
+                        onChange={(e) => setContactIdentifierFilter(e.target.value)}
+                        className="flex-1 h-[30px] bg-white border border-[#CCCCCC] px-2 text-[14px] focus:outline-none focus:border-2 focus:border-[#373737] text-[#1A1A1A]"
+                      />
+                      <FilterMenu
+                        isOpen={openMenuColumn === col.id}
+                        onOpenChange={(open) => setOpenMenuColumn(open ? col.id : null)}
+                        activeOption={filterModes[col.id] || "Contains"}
+                        onOptionSelect={(option) => setFilterModes({ ...filterModes, [col.id]: option })}
+                        trigger={
+                          <button className="w-[30px] h-[30px] shrink-0 bg-white border border-[#CCCCCC] flex items-center justify-center transition-colors hover:bg-[#F7F7F7] cursor-pointer outline-none focus:outline-none">
+                            <svg className="size-4" viewBox="0 0 20 20" fill="none">
+                              <path d={svgPathsMain.p25e92080} fill="#3A3A3A" />
+                            </svg>
+                          </button>
+                        }
+                      />
+                    </div>
                   ) : null}
                 </th>
               ))}

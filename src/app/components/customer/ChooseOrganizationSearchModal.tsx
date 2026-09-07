@@ -7,10 +7,8 @@ export interface Organization {
   orgNr: string;
   address: string;
   country: string;
-  status?: string;
   organizationType?: string;
   branchNumber?: string;
-  invoiceAddress?: string;
   source: "Internal" | "External";
   dunsNumber?: string;
   externalAddresses?: {
@@ -38,94 +36,70 @@ interface ChooseOrganizationSearchModalProps {
   initialQuery?: string;
 }
 
-// Mock data for demonstration
+// Mock data for demonstration - all organizations are based in Norway
 const mockOrganizations: Organization[] = [
   {
     id: "1",
-    orgName: "EG Retail",
-    orgNr: "5564849965",
-    address: "Malmögatan 5, 555 55, Malmö",
-    country: "Sweden",
+    orgName: "EG Retail AS",
+    orgNr: "968 992 600",
+    address: "Skonnertvegen 10, 7053 Ranheim",
+    country: "Norway",
     organizationType: "Parent",
-    invoiceAddress: "Malmögatan 5, 555 55, Malmö",
     source: "Internal",
     internalAddresses: [
-      { type: "Address", addressLine1: "Malmögatan 5", addressLine2: "", postalCode: "555 55", city: "Malmö", country: "Sweden" },
-      { type: "Invoice address", addressLine1: "Malmögatan 5", addressLine2: "", postalCode: "555 55", city: "Malmö", country: "Sweden" }
+      { type: "Address", addressLine1: "Skonnertvegen 10", addressLine2: "", postalCode: "7053", city: "Ranheim", country: "Norway" }
     ]
   },
   {
     id: "2",
-    orgName: "EG Retail",
-    orgNr: "5564849965",
-    address: "Fredsgatan 3, 411 07, Göteborg",
-    country: "Sweden",
-    organizationType: "Branch",
-    branchNumber: "5673920",
-    invoiceAddress: "Fredsgatan 5, 411 07, Göteborg",
+    orgName: "EG Norge AS",
+    orgNr: "983 781 233",
+    address: "Hoffsveien 4, 0275, Oslo",
+    country: "Norway",
+    organizationType: "Subsidiary",
     source: "External",
-    dunsNumber: "5673920",
+    dunsNumber: "5501234",
     externalAddresses: [
-      { type: "Address", addressLine1: "Fredsgatan 3", addressLine2: "", postalCode: "413 03", city: "Göteborg", country: "Sweden" },
-      { type: "Delivery address", addressLine1: "Fredsgatan 33", addressLine2: "", postalCode: "413 03", city: "Göteborg", country: "Sweden" },
-      { type: "Invoice address", addressLine1: "Fredsgatan 33", addressLine2: "", postalCode: "413 03", city: "Göteborg", country: "Sweden" }
+      { type: "Address", addressLine1: "Hoffsveien 4", addressLine2: "", postalCode: "0275", city: "Oslo", country: "Norway" }
     ]
   },
   {
     id: "3",
-    orgName: "EG Retail",
-    orgNr: "5564849965",
-    address: "Ängelholmsgatan 4, 444 44, Ängelholm",
-    country: "Sweden",
+    orgName: "EG Norge AS avd Oslo",
+    orgNr: "994 858 459",
+    address: "Hoffsveien 4, 0275, Oslo",
+    country: "Norway",
     organizationType: "Branch",
-    branchNumber: "5673921",
+    branchNumber: "994858459",
     source: "Internal",
     internalAddresses: [
-      { type: "Address", addressLine1: "Ängelholmsgatan 4", addressLine2: "", postalCode: "444 44", city: "Ängelholm", country: "Sweden" },
-      { type: "Delivery address", addressLine1: "Storgatan 12", addressLine2: "", postalCode: "444 44", city: "Ängelholm", country: "Sweden" },
-      { type: "Invoice address", addressLine1: "Box 42", addressLine2: "", postalCode: "444 44", city: "Ängelholm", country: "Sweden" }
+      { type: "Address", addressLine1: "Hoffsveien 4", addressLine2: "", postalCode: "0275", city: "Oslo", country: "Norway" }
     ]
   },
   {
     id: "4",
-    orgName: "EG Retail",
-    orgNr: "5564849965",
-    address: "Kalrstadsgatan 6, 666 66, Karlstad",
-    country: "Sweden",
+    orgName: "EG Norge AS avd Bergen",
+    orgNr: "991 905 065",
+    address: "Inger Bang Lunds vei 14, 5059 Bergen",
+    country: "Norway",
     organizationType: "Branch",
-    branchNumber: "5673922",
+    branchNumber: "991905065",
     source: "Internal",
     internalAddresses: [
-      { type: "Address", addressLine1: "Kalrstadsgatan 6", addressLine2: "", postalCode: "666 66", city: "Karlstad", country: "Sweden" },
-      { type: "Delivery address", addressLine1: "Lagervägen 3", addressLine2: "", postalCode: "666 66", city: "Karlstad", country: "Sweden" }
+      { type: "Address", addressLine1: "Inger Bang Lunds vei 14", addressLine2: "", postalCode: "5059", city: "Bergen", country: "Norway" }
     ]
   },
   {
     id: "5",
-    orgName: "EG Retail",
-    orgNr: "5564849965",
-    address: "Stockholmsgatan 7, 777 77, Stockholm",
-    country: "Sweden",
-    status: "Exists",
-    organizationType: "Subsidiary",
-    source: "Internal",
-    internalAddresses: [
-      { type: "Address", addressLine1: "Stockholmsgatan 7", addressLine2: "", postalCode: "777 77", city: "Stockholm", country: "Sweden" }
-    ]
-  },
-  {
-    id: "6",
-    orgName: "EG Retail Trondheim",
-    orgNr: "968992600",
-    address: "Skonnertvegen 8-10, 7053 Trondheim",
+    orgName: "EG Retail AS avd Trondheim",
+    orgNr: "982 460 298",
+    address: "Skonnertvegen 8-10, 7053 Ranheim",
     country: "Norway",
     organizationType: "Branch",
-    branchNumber: "9689926",
-    invoiceAddress: "Skonnertvegen 10, 7053 Trondheim",
+    branchNumber: "982460298",
     source: "Internal",
     internalAddresses: [
-      { type: "Address", addressLine1: "Skonnertvegen 8-10", addressLine2: "", postalCode: "7053", city: "Trondheim", country: "Norway" },
-      { type: "Invoice address", addressLine1: "Skonnertvegen 10", addressLine2: "", postalCode: "7053", city: "Trondheim", country: "Norway" }
+      { type: "Address", addressLine1: "Skonnertvegen 8-10", addressLine2: "", postalCode: "7053", city: "Ranheim", country: "Norway" }
     ]
   }
 ];
@@ -204,54 +178,43 @@ export function ChooseOrganizationSearchModal({
                   Country
                 </th>
                 <th className="px-[12px] py-[8px] text-left font-['Roboto_Condensed:Bold',sans-serif] text-[13px] leading-[16px] text-white uppercase border-r border-white">
-                  Source
+                  Org Type
                 </th>
                 <th className="px-[12px] py-[8px] text-left font-['Roboto_Condensed:Bold',sans-serif] text-[13px] leading-[16px] text-white uppercase">
-                  Status
+                  Source
                 </th>
               </tr>
             </thead>
             <tbody>
-              {organizations.map((org, index) => (
-                <tr
-                  key={org.id}
-                  onClick={() => !org.status && onSelectOrganization(org)}
-                  className={`border-b border-[#E0E0E0] ${
-                    org.status 
-                      ? "bg-[#F5F5F5] cursor-not-allowed opacity-60" 
-                      : "hover:bg-[#F5F5F5] cursor-pointer"
-                  }`}
-                >
-                  <td className={`px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] ${
-                    org.status ? "text-[#999999]" : "text-[#1a1a1a]"
-                  }`}>
-                    {org.orgName}
-                  </td>
-                  <td className={`px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] ${
-                    org.status ? "text-[#999999] line-through" : "text-[#1a1a1a] underline"
-                  }`}>
-                    {org.orgNr}
-                  </td>
-                  <td className={`px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] ${
-                    org.status ? "text-[#999999]" : "text-[#1a1a1a]"
-                  }`}>
-                    {org.address}
-                  </td>
-                  <td className={`px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] ${
-                    org.status ? "text-[#999999]" : "text-[#1a1a1a]"
-                  }`}>
-                    {org.country}
-                  </td>
-                  <td className={`px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] ${
-                    org.status ? "text-[#999999]" : "text-[#1a1a1a]"
-                  }`}>
-                    {org.source}
-                  </td>
-                  <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
-                    {org.status || ""}
-                  </td>
-                </tr>
-              ))}
+              {organizations.map((org, index) => {
+                const isHighlighted = index === 0;
+                return (
+                  <tr
+                    key={org.id}
+                    onClick={() => onSelectOrganization(org)}
+                    className={`border-b border-[#E0E0E0] cursor-pointer ${isHighlighted ? "bg-[#F5F5F5]" : "hover:bg-[#F5F5F5]"}`}
+                  >
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
+                      {org.orgName}
+                    </td>
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] underline text-[#1a1a1a]">
+                      {org.orgNr}
+                    </td>
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
+                      {org.address}
+                    </td>
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
+                      {org.country}
+                    </td>
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
+                      {org.organizationType}
+                    </td>
+                    <td className="px-[12px] py-[10px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a]">
+                      {org.source}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
