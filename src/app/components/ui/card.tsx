@@ -275,7 +275,7 @@ function CardRowAuto({ className, maxColumns = 3, children, ...props }: CardRowA
     // previously left this row unable to resolve its own width correctly. Mirrors
     // the same outer/inner split already used by `CardRowSplit` below.
     <div data-slot="card-row-auto" className={cn("@container w-full", className)} {...props}>
-      <div className={cn("grid gap-6 items-stretch", gridColsClass)}>{children}</div>
+      <div className={cn("w-full grid gap-6 items-stretch", gridColsClass)}>{children}</div>
     </div>
   );
 }
