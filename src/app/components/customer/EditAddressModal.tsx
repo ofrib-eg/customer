@@ -90,6 +90,21 @@ interface EditAddressModalProps {
   noticeText?: string;
   onRemove?: () => void;
   useAsOptions?: { deliveryMissing: boolean; invoiceMissing: boolean };
+  /**
+   * Lets an already-added Delivery/Invoice address card switch which of the two
+   * types it is, from within edit mode (rather than a separate "..." menu action).
+   * `currentType` is the type being edited. If the other type is already taken
+   * (`otherTypeTaken`), selecting it is a swap - the other card takes on
+   * `currentType` instead of being disabled, since with only two non-"general"
+   * types a swap always has a valid resolution. `onTypeChange` receives
+   * `isSwap` so the caller knows to move the other card's fields into the
+   * vacated slot rather than clearing it.
+   */
+  addressTypeOptions?: {
+    currentType: "delivery" | "invoice";
+    otherTypeTaken: boolean;
+    onTypeChange: (type: "delivery" | "invoice", fields: AddressFields, isSwap: boolean) => void;
+  };
 }
 
 function ModalField({
@@ -131,11 +146,13 @@ export function EditAddressModal({
   title = "Edit address",
   noticeText = "Address information is shared for all relationships (i.e. customer, member and business contact).",
   onRemove,
-  useAsOptions
+  useAsOptions,
+  addressTypeOptions
 }: EditAddressModalProps) {
   const [draft, setDraft] = React.useState<AddressFields>(fields);
   const [useAsDelivery, setUseAsDelivery] = React.useState(false);
   const [useAsInvoice, setUseAsInvoice] = React.useState(false);
+  const [selectedType, setSelectedType] = React.useState<"delivery" | "invoice">("delivery");
 
   React.useEffect(() => {
     if (isOpen) {
@@ -144,15 +161,26 @@ export function EditAddressModal({
         setUseAsDelivery(useAsOptions.deliveryMissing);
         setUseAsInvoice(useAsOptions.invoiceMissing);
       }
+      if (addressTypeOptions) {
+        setSelectedType(addressTypeOptions.currentType);
+      }
     }
-  }, [isOpen, fields, useAsOptions]);
+  }, [isOpen, fields, useAsOptions, addressTypeOptions]);
 
   const update = (key: keyof AddressFields) => (value: string) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
-    onSave(draft, useAsOptions ? { delivery: useAsDelivery, invoice: useAsInvoice } : undefined);
+    if (addressTypeOptions && selectedType !== addressTypeOptions.currentType) {
+      // Type changed: move the edited fields to the new slot instead of saving
+      // them back under the old type. If the new type is already taken by the
+      // other card, this is a swap - the other card moves into this card's
+      // current type rather than being cleared.
+      addressTypeOptions.onTypeChange(selectedType, draft, addressTypeOptions.otherTypeTaken);
+    } else {
+      onSave(draft, useAsOptions ? { delivery: useAsDelivery, invoice: useAsInvoice } : undefined);
+    }
     onClose();
   };
 
@@ -186,6 +214,34 @@ export function EditAddressModal({
 
           {/* Body */}
           <div className="px-[24px] pt-[16px] pb-[24px] flex flex-col max-w-[280px]">
+            {addressTypeOptions && (
+              <div className="mb-[16px]">
+                <label className="block font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#666] mb-[2px]">
+                  * Address type
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value as "delivery" | "invoice")}
+                  className="w-full h-[32px] px-[10px] border border-[#ccc] bg-white text-[14px] font-['Roboto:Regular',sans-serif] text-[#1a1a1a] outline-none focus:border-[#1c7862] cursor-pointer"
+                >
+                  <option value="delivery">
+                    {addressTypeOptions.otherTypeTaken && addressTypeOptions.currentType !== "delivery"
+                      ? "Delivery address (swap with current)"
+                      : "Delivery address"}
+                  </option>
+                  <option value="invoice">
+                    {addressTypeOptions.otherTypeTaken && addressTypeOptions.currentType !== "invoice"
+                      ? "Invoice address (swap with current)"
+                      : "Invoice address"}
+                  </option>
+                </select>
+                {addressTypeOptions.otherTypeTaken && selectedType !== addressTypeOptions.currentType && (
+                  <p className="mt-[6px] font-['Roboto:Regular',sans-serif] text-[13px] text-[#666]">
+                    The other card will switch to {addressTypeOptions.currentType === "delivery" ? "Delivery address" : "Invoice address"}.
+                  </p>
+                )}
+              </div>
+            )}
             <ModalField label="Address line 1" value={draft.addressLine1} onChange={update("addressLine1")} required />
             <ModalField label="Address line 2" value={draft.addressLine2} onChange={update("addressLine2")} />
             <ModalField label="Postal code" value={draft.postalCode} onChange={update("postalCode")} required />

@@ -13,6 +13,7 @@ import { CustomerGroupDetail } from "./customer/CustomerGroupDetail";
 import { ContactDetail } from "./customer/ContactDetail";
 import { OrganizationDetail } from "./customer/OrganizationDetail";
 import { NewCustomerPage } from "./customer/NewCustomerPage";
+import { CardSectionDemo } from "./customer/CardSectionDemo";
 
 export function CustomerModule() {
   const navigate = useNavigate();
@@ -45,6 +46,8 @@ export function CustomerModule() {
           <Route path="/organizations/:id" element={<OrganizationDetail />} />
           <Route path="/offers" element={<OffersRegistryGrid />} />
           <Route path="/offers/:id" element={<OfferRegistryDetail />} />
+          {/* Prototype-only scratch route, see CardSectionDemo.tsx — safe to remove once responsive card system migration is complete */}
+          <Route path="/card-section-demo" element={<CardSectionDemo />} />
         </Routes>
       </div>
     </div>

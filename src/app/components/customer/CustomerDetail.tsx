@@ -19,7 +19,7 @@ import { NewOfferModal } from "./NewOfferModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { Check, X, Link as LinkIcon, MoreHorizontal, Info, Pencil, Plus } from "lucide-react";
-import { Card, CardContent } from "@/app/components/ui/card";
+import { Card, CardContent, CardSection, CardRowAuto, CardRowSplit } from "@/app/components/ui/card";
 import { DETAIL_CARD_CLASS, SectionHeader, FieldLabel, InputField, SelectField, ReadOnlyField, CheckboxField, DateField } from "./sharedFields";
 
 type BusinessAddressType = "general" | "delivery" | "invoice";
@@ -342,15 +342,72 @@ const EXAMPLE_CUSTOMER_NOTES: Record<number, string> = {
 
 const NOTES_MAX_HEIGHT = 320;
 
-function AddressSection({ title, fields, onEdit }: { title: string; fields: AddressFields; onEdit: () => void }) {
+interface AddressSectionMenuItem {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}
+
+/**
+ * Address card body used for the Business customer Address / Delivery address /
+ * Invoice address row. `menuItems` drives the "..." (more actions) menu - the
+ * Address card gets "Add address" + "Edit"; an added Delivery/Invoice card gets
+ * "Change type" + "Delete" (delete is only ever reachable from this menu, never
+ * a standalone action on the saved/view-mode card itself).
+ *
+ * `readOnly` reuses the same "Updated by external party" read-only convention
+ * already established for D&B-imported organisation data elsewhere on this page
+ * (see `isExternalOrg` above) - no separate convention invented for addresses.
+ */
+function AddressSection({
+  title,
+  fields,
+  menuItems,
+  readOnly
+}: {
+  title: string;
+  fields: AddressFields;
+  menuItems: AddressSectionMenuItem[];
+  readOnly?: boolean;
+}) {
   return (
-    <div className="flex-1 min-w-[200px]">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-[10px]">
         <SectionHeader className="">{title}</SectionHeader>
-        <button type="button" onClick={onEdit} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label={`Edit ${title.toLowerCase()}`}>
-          <Pencil className="size-[16px]" />
-        </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors"
+              aria-label={`${title} options`}
+            >
+              <MoreHorizontal className="size-[16px]" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              align="end"
+              sideOffset={4}
+              className="z-[10000] bg-white border border-[#CCCCCC] shadow-lg outline-none overflow-hidden min-w-[180px]"
+            >
+              {menuItems.map((item) => (
+                <DropdownMenu.Item
+                  key={item.label}
+                  onClick={item.disabled ? undefined : item.onClick}
+                  disabled={item.disabled}
+                  className="h-[36px] px-4 flex items-center text-[14px] font-roboto font-normal text-[#1A1A1A] outline-none cursor-pointer focus:bg-[#EAEAEA] transition-colors data-[disabled]:text-[#ccc] data-[disabled]:cursor-not-allowed data-[disabled]:focus:bg-transparent"
+                >
+                  {item.label}
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       </div>
+
+      {readOnly && (
+        <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">Updated by external party</p>
+      )}
 
       {/* Address is edited via modal, matching the private customer contact card pattern */}
       <ReadOnlyField compact hideIfEmpty label="Address line 1" value={fields.addressLine1} />
@@ -1038,7 +1095,7 @@ export function CustomerDetail() {
                 <div className="flex flex-col gap-6 mb-4">
                   {/* Customer identity card */}
                   <Card className={DETAIL_CARD_CLASS}>
-                    <CardContent className="p-8">
+                    <CardSection className="p-8">
                       <div className="flex items-start justify-between gap-[10px] mb-[4px]">
                         <div className="flex items-center gap-[10px]">
                           <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
@@ -1078,8 +1135,11 @@ export function CustomerDetail() {
                       </div>
                       <div className="border-t border-[#E5E7EB] mb-[16px]" />
 
-                      <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
-                        <div className="w-full @md:w-[260px]">
+                      {/* Field-level collapse (step 1 pattern): grid + 1fr tracks instead of the old
+                          fixed-width flex row, so 3 columns actually reach the container's edges
+                          and collapse to a single column when the card itself gets narrow. */}
+                      <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-x-8 gap-y-4">
+                        <div>
                           <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
                           {isInactive ? (
                             <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
@@ -1087,7 +1147,7 @@ export function CustomerDetail() {
                             <InputField compact label="Ext. customer number" value={customer.extCustomerNumber} />
                           )}
                         </div>
-                        <div className="w-full @md:w-[260px]">
+                        <div>
                           <ReadOnlyField compact label="Store" value={getStoreOrProfileLabel(customer.store)} />
                           {isInactive ? (
                             <ReadOnlyField compact label="Customer group" value={customer.customerGroup || "–"} />
@@ -1105,7 +1165,7 @@ export function CustomerDetail() {
                             />
                           )}
                         </div>
-                        <div className="w-full @md:w-[260px]">
+                        <div>
                           <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
                         </div>
                       </div>
@@ -1115,12 +1175,12 @@ export function CustomerDetail() {
                           <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
                         </div>
                       )}
-                    </CardContent>
+                    </CardSection>
                   </Card>
 
                   {/* Contact card */}
                   <Card className={DETAIL_CARD_CLASS}>
-                    <CardContent className="p-8">
+                    <CardSection className="p-8">
                       <div className="flex items-center justify-between mb-[10px]">
                         <SectionHeader className="">Contact</SectionHeader>
                         <button type="button" onClick={() => setIsEditContactModalOpen(true)} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label="Edit contact">
@@ -1144,15 +1204,15 @@ export function CustomerDetail() {
                           <ReadOnlyField compact label="Ext. identity number" value={contactFields.extIdentityNumber} required />
                         </div>
                       </div>
-                    </CardContent>
+                    </CardSection>
                   </Card>
 
                   {/* Credit + Customer card */}
                   {(creditCustomerDraft || customerCard) && (
-                    <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+                    <CardRowAuto maxColumns={2}>
                       {creditCustomerDraft && (
                         <Card className={DETAIL_CARD_CLASS}>
-                          <CardContent className="p-8">
+                          <CardSection className="p-8">
                             <div className="flex items-center justify-between mb-[10px]">
                               <div className="flex items-center gap-[10px]">
                                 <SectionHeader className="">Credit</SectionHeader>
@@ -1201,13 +1261,13 @@ export function CustomerDetail() {
                                 <CheckboxField compact label="Credit locked" checked={creditLocked} onChange={setCreditLocked} />
                               </div>
                             </div>
-                          </CardContent>
+                          </CardSection>
                         </Card>
                       )}
 
                       {customerCard && (
                         <Card className={DETAIL_CARD_CLASS}>
-                          <CardContent className="p-8">
+                          <CardSection className="p-8">
                             <div className="flex items-center justify-between mb-[10px]">
                               <SectionHeader className="">Customer card</SectionHeader>
                               <DropdownMenu.Root>
@@ -1247,16 +1307,16 @@ export function CustomerDetail() {
                                 <ReadOnlyField compact label="Start date" value={customerCard.startDate} />
                               </div>
                             </div>
-                          </CardContent>
+                          </CardSection>
                         </Card>
                       )}
-                    </div>
+                    </CardRowAuto>
                   )}
 
                   {/* Address + Notes */}
                   <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
                     <Card className={DETAIL_CARD_CLASS}>
-                      <CardContent className="p-8">
+                      <CardSection className="p-8">
                         <div className="flex items-center justify-between mb-[10px]">
                           <SectionHeader className="">Address</SectionHeader>
                           <button type="button" onClick={() => setIsEditAddressModalOpen(true)} className="p-[6px] -m-[6px] rounded-full text-[#666] hover:text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-pointer transition-colors" aria-label="Edit address">
@@ -1268,11 +1328,11 @@ export function CustomerDetail() {
                         <ReadOnlyField compact hideIfEmpty label="Postal code" value={addressFields.postalCode} />
                         <ReadOnlyField compact hideIfEmpty label="City" value={addressFields.city} />
                         <ReadOnlyField compact hideIfEmpty label="Country" value={addressFields.country} />
-                      </CardContent>
+                      </CardSection>
                     </Card>
 
                     <Card className={DETAIL_CARD_CLASS}>
-                      <CardContent className="p-8 h-full flex flex-col">
+                      <CardSection className="p-8 h-full flex flex-col">
                         <SectionHeader>Notes</SectionHeader>
                         <FieldLabel>Customer notes</FieldLabel>
                         <textarea
@@ -1282,13 +1342,13 @@ export function CustomerDetail() {
                           className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
                           style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
                         />
-                      </CardContent>
+                      </CardSection>
                     </Card>
                   </div>
 
                   {/* Relationships - full width */}
                   <Card className={DETAIL_CARD_CLASS}>
-                    <CardContent className="p-8">
+                    <CardSection className="p-8">
                       <div className="flex items-center justify-between mb-[10px]">
                         <SectionHeader className="">Relationships</SectionHeader>
                         <button
@@ -1326,14 +1386,14 @@ export function CustomerDetail() {
                           </tbody>
                         </table>
                       </div>
-                    </CardContent>
+                    </CardSection>
                   </Card>
                 </div>
               </div>
             </div>
           )}
         </div>
-        
+
         {/* Modals - Only Private customer modals */}
         <EditContactModal
           isOpen={isEditContactModalOpen}
@@ -1517,7 +1577,7 @@ export function CustomerDetail() {
             <div className="flex flex-col gap-6 mb-4">
               {/* Customer identity card - full width, 3 field columns */}
               <Card className={DETAIL_CARD_CLASS}>
-                <CardContent className="p-8">
+                <CardSection className="p-8">
                   <div className="flex items-start justify-between gap-[10px] mb-[4px]">
                     <div className="flex items-center gap-[10px]">
                       <h2 className="font-['Roboto_Condensed',sans-serif] font-bold text-[20px] leading-[24px] tracking-[0px] text-[#1a1a1a] uppercase">
@@ -1563,8 +1623,12 @@ export function CustomerDetail() {
                   </div>
                   <div className="border-t border-[#E5E7EB] mb-[16px]" />
 
-                  <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
-                    <div className="w-full @md:w-[260px]">
+                  {/* Field-level collapse (step 1 pattern): grid + 1fr tracks instead of the old
+                      fixed-width flex row, so 3 columns actually reach the container's edges and
+                      collapse to a single column when the card itself gets narrow, instead of
+                      overflowing/colliding at intermediate widths. */}
+                  <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-x-8 gap-y-4">
+                    <div>
                       <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
                       {isInactive || organizationStatus === "deleted" ? (
                         <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
@@ -1573,7 +1637,7 @@ export function CustomerDetail() {
                       )}
                       <ReadOnlyField compact label="Profile" value={getStoreOrProfileLabel(customer.store)} />
                     </div>
-                    <div className="w-full @md:w-[260px]">
+                    <div>
                       <InputField compact label="Email" value={customer.email} />
                       <InputField compact label="Phone number" value={customer.phone} />
                       {isInactive ? (
@@ -1592,7 +1656,7 @@ export function CustomerDetail() {
                         />
                       )}
                     </div>
-                    <div className="w-full @md:w-[260px]">
+                    <div>
                       <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
                     </div>
                   </div>
@@ -1602,14 +1666,17 @@ export function CustomerDetail() {
                       <ReadOnlyField label="Deactivation reason" value={deactivationReason} />
                     </div>
                   )}
-                </CardContent>
+                </CardSection>
               </Card>
 
-              {/* Organisation + Notes */}
-              <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+              {/* Organisation + Notes - asymmetric 8/4 split (step 5): single stacked column
+                  below 800px container width, wider Organisation / narrower Notes at and
+                  above 800px. If Organisation is hidden (deleted org), Notes takes the full
+                  row width - CardRowSplit handles the single-child case generically. */}
+              <CardRowSplit ratio={[6, 6]}>
                 {organizationStatus !== "deleted" && (
                   <Card className={DETAIL_CARD_CLASS}>
-                    <CardContent className="p-8">
+                    <CardSection className="p-8">
                       <div className="flex items-center justify-between mb-[10px]">
                         <SectionHeader className="" icon={<LinkIcon className="size-[14px] text-[#1a1a1a]" />}>Organisation</SectionHeader>
                         {!isExternalOrg && (
@@ -1689,12 +1756,12 @@ export function CustomerDetail() {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
+                    </CardSection>
                   </Card>
                 )}
 
                 <Card className={DETAIL_CARD_CLASS}>
-                  <CardContent className="p-8 h-full flex flex-col">
+                  <CardSection className="p-8 h-full flex flex-col">
                     <SectionHeader>Notes</SectionHeader>
                     <FieldLabel>Customer notes</FieldLabel>
                     <textarea
@@ -1704,106 +1771,153 @@ export function CustomerDetail() {
                       className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
                       style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
                     />
-                  </CardContent>
+                  </CardSection>
                 </Card>
-              </div>
+              </CardRowSplit>
 
-              {/* Addresses */}
-              <div className="grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 gap-6">
+              {/* Addresses - Address is always present/required; Delivery and Invoice are optional,
+                  added one at a time via the Address card's "..." menu, up to 3 cards total.
+                  CardRowAuto splits however many of the 3 are actually rendered evenly (step 3). */}
+              <CardRowAuto maxColumns={3}>
                 {organizationStatus !== "deleted" ? (
                   isExternalOrg ? (
-                    ((customer as any).addresses || []).map((addr: any, index: number) => (
-                      <Card key={index} className={DETAIL_CARD_CLASS}>
-                        <CardContent className="p-8">
-                          <SectionHeader className="mb-[4px]">{addr.type}</SectionHeader>
-                          <p className="font-['Roboto:Regular',sans-serif] text-[14px] text-[#666] mb-[16px]">Updated by external party</p>
-                          <ReadOnlyField compact label="Address line 1" value={addr.addressLine1} />
-                          <ReadOnlyField compact label="Address line 2" value={addr.addressLine2 || "-"} />
-                          <ReadOnlyField compact label="Postal code" value={addr.postalCode} />
-                          <ReadOnlyField compact label="City" value={addr.city} />
-                          <ReadOnlyField compact label="Country" value={addr.country} />
-                        </CardContent>
-                      </Card>
-                    ))
+                    // D&B-imported organisation: all address cards are read-only, matching the
+                    // same "Updated by external party" convention used for Organisation identity
+                    // above. Editing a D&B-sourced address still goes through the "Edit" menu
+                    // item, which opens the existing EditAddressModal.
+                    //
+                    // NOTE: "if D&B later supplies a value for a field that was manually added,
+                    // the D&B value overwrites the manual one" is NOT implemented here - this
+                    // prototype's mock data has no mechanism for D&B pushing updates after the
+                    // fact (addresses are seeded once from `(customer as any).addresses`), so
+                    // there's nothing to overwrite yet. Flagging as new logic needed once a real
+                    // D&B sync/webhook concept exists in the data layer, not something already
+                    // present to wire up.
+                    ((customer as any).addresses || []).map((addr: any, index: number) => {
+                      const addressType: BusinessAddressType =
+                        addr.type === "Delivery address" ? "delivery" : addr.type === "Invoice address" ? "invoice" : "general";
+                      return (
+                        <Card key={index} className={DETAIL_CARD_CLASS}>
+                          <CardSection className="p-8">
+                            <AddressSection
+                              title={addr.type}
+                              fields={businessAddresses[addressType]}
+                              readOnly
+                              menuItems={[{ label: "Edit", onClick: () => setEditingAddressType(addressType) }]}
+                            />
+                          </CardSection>
+                        </Card>
+                      );
+                    })
                   ) : (
                     <>
-                      <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Address" fields={businessAddresses.general} onEdit={() => setEditingAddressType("general")} /></CardContent></Card>
+                      <Card className={DETAIL_CARD_CLASS}>
+                        <CardSection className="p-8">
+                          <AddressSection
+                            title="Address"
+                            fields={businessAddresses.general}
+                            menuItems={[
+                              {
+                                label: "Add address",
+                                disabled: !!businessAddresses.delivery.addressLine1 && !!businessAddresses.invoice.addressLine1,
+                                onClick: () => {
+                                  setNewAddressType(businessAddresses.delivery.addressLine1 ? "invoice" : "delivery");
+                                  setIsAddingAddress(true);
+                                }
+                              },
+                              { label: "Edit", onClick: () => setEditingAddressType("general") }
+                            ]}
+                          />
+                        </CardSection>
+                      </Card>
+
                       {businessAddresses.delivery.addressLine1 && (
-                        <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Delivery address" fields={businessAddresses.delivery} onEdit={() => setEditingAddressType("delivery")} /></CardContent></Card>
-                      )}
-                      {businessAddresses.invoice.addressLine1 && (
-                        <Card className={DETAIL_CARD_CLASS}><CardContent className="p-8"><AddressSection title="Invoice address" fields={businessAddresses.invoice} onEdit={() => setEditingAddressType("invoice")} /></CardContent></Card>
-                      )}
-                      {[businessAddresses.delivery.addressLine1, businessAddresses.invoice.addressLine1].filter(Boolean).length === 1 && (
                         <Card className={DETAIL_CARD_CLASS}>
-                          <CardContent className="p-8">
-                            {isAddingAddress ? (
-                              <div className="flex-1 min-w-[200px]">
-                                <SectionHeader className="mb-[10px]">New address</SectionHeader>
-                                <SelectField
-                                  compact
-                                  required
-                                  label="Address type"
-                                  value={newAddressType}
-                                  options={
-                                    businessAddresses.delivery.addressLine1
-                                      ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "invoice")
-                                      : businessAddresses.invoice.addressLine1
-                                      ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "delivery")
-                                      : NEW_ADDRESS_TYPE_OPTIONS
-                                  }
-                                  onChange={(v) => setNewAddressType(v as "delivery" | "invoice")}
-                                  hideBlankOption
-                                />
-                                <InputField compact required label="Address line 1" value={newAddressDraft.addressLine1} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine1: v }))} />
-                                <InputField compact label="Address line 2" value={newAddressDraft.addressLine2} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine2: v }))} />
-                                <InputField compact required label="Postal code" value={newAddressDraft.postalCode} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, postalCode: v }))} />
-                                <InputField compact required label="City" value={newAddressDraft.city} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, city: v }))} />
-                                <SelectField compact required label="Country" value={newAddressDraft.country} options={ADDRESS_COUNTRY_OPTIONS} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, country: v }))} />
-                                <div className="flex items-center gap-[8px] mt-[16px]">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleSaveBusinessAddress(newAddressType, newAddressDraft);
-                                      setIsAddingAddress(false);
-                                      setNewAddressDraft(emptyAddress);
-                                    }}
-                                    className="bg-[#1c7862] h-[30px] px-[16px] rounded-[33554400px] border border-[#1c7862] hover:bg-[#248E73] hover:border-[#248E73] transition-colors cursor-pointer"
-                                  >
-                                    <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[13px] text-center text-white uppercase">
-                                      Save
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setIsAddingAddress(false);
-                                      setNewAddressDraft(emptyAddress);
-                                    }}
-                                    className="bg-[#eaeaea] h-[30px] px-[16px] rounded-[33554400px] hover:bg-[#e0e0e0] transition-colors cursor-pointer"
-                                  >
-                                    <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[#1a1a1a] text-[13px] text-center uppercase">
-                                      Cancel
-                                    </span>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="h-full flex items-center justify-center">
+                          <CardSection className="p-8">
+                            <AddressSection
+                              title="Delivery address"
+                              fields={businessAddresses.delivery}
+                              menuItems={[
+                                { label: "Edit", onClick: () => setEditingAddressType("delivery") },
+                                { label: "Delete", onClick: () => handleSaveBusinessAddress("delivery", emptyAddress) }
+                              ]}
+                            />
+                          </CardSection>
+                        </Card>
+                      )}
+
+                      {businessAddresses.invoice.addressLine1 && (
+                        <Card className={DETAIL_CARD_CLASS}>
+                          <CardSection className="p-8">
+                            <AddressSection
+                              title="Invoice address"
+                              fields={businessAddresses.invoice}
+                              menuItems={[
+                                { label: "Edit", onClick: () => setEditingAddressType("invoice") },
+                                { label: "Delete", onClick: () => handleSaveBusinessAddress("invoice", emptyAddress) }
+                              ]}
+                            />
+                          </CardSection>
+                        </Card>
+                      )}
+
+                      {isAddingAddress && (
+                        <Card className={DETAIL_CARD_CLASS}>
+                          <CardSection className="p-8">
+                            <div className="w-full">
+                              <SectionHeader className="mb-[4px]">New address</SectionHeader>
+                              <p className="font-['Roboto:Regular',sans-serif] text-[13px] text-[#666] mb-[16px]">
+                                Adding an address here also updates the organisation record.
+                              </p>
+                              <SelectField
+                                compact
+                                required
+                                label="Address type"
+                                value={newAddressType}
+                                options={
+                                  businessAddresses.delivery.addressLine1
+                                    ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "invoice")
+                                    : businessAddresses.invoice.addressLine1
+                                    ? NEW_ADDRESS_TYPE_OPTIONS.filter((o) => o.value === "delivery")
+                                    : NEW_ADDRESS_TYPE_OPTIONS
+                                }
+                                onChange={(v) => setNewAddressType(v as "delivery" | "invoice")}
+                                hideBlankOption
+                              />
+                              <InputField compact required label="Address line 1" value={newAddressDraft.addressLine1} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine1: v }))} />
+                              <InputField compact label="Address line 2" value={newAddressDraft.addressLine2} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine2: v }))} />
+                              <InputField compact required label="Postal code" value={newAddressDraft.postalCode} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, postalCode: v }))} />
+                              <InputField compact required label="City" value={newAddressDraft.city} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, city: v }))} />
+                              <SelectField compact required label="Country" value={newAddressDraft.country} options={ADDRESS_COUNTRY_OPTIONS} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, country: v }))} />
+                              <div className="flex items-center gap-[8px] mt-[16px]">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setNewAddressType(businessAddresses.delivery.addressLine1 ? "invoice" : "delivery");
-                                    setIsAddingAddress(true);
+                                    handleSaveBusinessAddress(newAddressType, newAddressDraft);
+                                    setIsAddingAddress(false);
+                                    setNewAddressDraft(emptyAddress);
                                   }}
-                                  className="h-[36px] px-[20px] rounded-full border border-[#ccc] flex items-center gap-[8px] hover:bg-[#f5f5f5] cursor-pointer"
+                                  className="bg-[#1c7862] h-[30px] px-[16px] rounded-[33554400px] border border-[#1c7862] hover:bg-[#248E73] hover:border-[#248E73] transition-colors cursor-pointer"
                                 >
-                                  <Plus className="size-[16px] text-[#1a1a1a]" />
-                                  <span className="font-['Roboto_Condensed:Bold',sans-serif] text-[15px] text-[#1a1a1a]">Add address</span>
+                                  <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[13px] text-center text-white uppercase">
+                                    Save
+                                  </span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsAddingAddress(false);
+                                    setNewAddressDraft(emptyAddress);
+                                  }}
+                                  className="bg-[#eaeaea] h-[30px] px-[16px] rounded-[33554400px] hover:bg-[#e0e0e0] transition-colors cursor-pointer"
+                                >
+                                  <span className="font-['Roboto_Condensed:SemiBold',sans-serif] leading-[19.5px] not-italic text-[#1a1a1a] text-[13px] text-center uppercase">
+                                    Cancel
+                                  </span>
                                 </button>
                               </div>
-                            )}
-                          </CardContent>
+                            </div>
+                          </CardSection>
                         </Card>
                       )}
                     </>
@@ -1811,38 +1925,38 @@ export function CustomerDetail() {
                 ) : (
                   <>
                     <Card className={DETAIL_CARD_CLASS}>
-                      <CardContent className="p-8">
+                      <CardSection className="p-8">
                         <SectionHeader>Address</SectionHeader>
                         <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="City" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
-                      </CardContent>
+                      </CardSection>
                     </Card>
                     <Card className={DETAIL_CARD_CLASS}>
-                      <CardContent className="p-8">
+                      <CardSection className="p-8">
                         <SectionHeader>Delivery address</SectionHeader>
                         <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="City" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
-                      </CardContent>
+                      </CardSection>
                     </Card>
                     <Card className={DETAIL_CARD_CLASS}>
-                      <CardContent className="p-8">
+                      <CardSection className="p-8">
                         <SectionHeader>Invoice address</SectionHeader>
                         <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="City" value="–" />
                         <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
-                      </CardContent>
+                      </CardSection>
                     </Card>
                   </>
                 )}
-              </div>
+              </CardRowAuto>
 
               {/* Credit - visibility follows the checkbox live; Save persists the choice */}
               {creditCustomerDraft && (
@@ -1959,6 +2073,23 @@ export function CustomerDetail() {
             deliveryMissing: !businessAddresses.delivery.addressLine1,
             invoiceMissing: !businessAddresses.invoice.addressLine1
           } : undefined}
+          addressTypeOptions={
+            editingAddressType === "delivery" || editingAddressType === "invoice"
+              ? {
+                  currentType: editingAddressType,
+                  otherTypeTaken: !!businessAddresses[editingAddressType === "delivery" ? "invoice" : "delivery"].addressLine1,
+                  onTypeChange: (newType, fields, isSwap) => {
+                    const oldType = editingAddressType;
+                    const otherCardFields = businessAddresses[newType];
+                    handleSaveBusinessAddress(newType, fields);
+                    // Swap: the other card takes over the slot being vacated, instead of
+                    // clearing it - both sides of the swap always resolve for a fixed
+                    // Delivery/Invoice pair, so this never leaves a card orphaned.
+                    handleSaveBusinessAddress(oldType, isSwap ? otherCardFields : emptyAddress);
+                  }
+                }
+              : undefined
+          }
         />
       )}
 
