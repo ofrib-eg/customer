@@ -62,7 +62,10 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
         // to fill the track, in exactly the "cards leave empty space instead
         // of splitting the row evenly" way — an explicit `w-full` removes the
         // ambiguity instead of relying on the parent grid's stretch default.
-        "bg-card text-card-foreground @container w-full flex flex-col gap-6 rounded-xl border",
+        // `overflow-hidden` so a `flush` CardSection's edge-to-edge content
+        // (e.g. a data table's square-cornered header row) is clipped to this
+        // card's own rounded corners instead of visibly overhanging them.
+        "bg-card text-card-foreground @container w-full flex flex-col gap-6 rounded-xl border overflow-hidden",
         className,
       )}
       {...props}
@@ -234,7 +237,10 @@ function CardSection({
       className={cn(
         "[&:not(:first-child)]:border-t [&:not(:first-child)]:border-border",
         flush && !columns ? "p-0" : "px-6 py-6",
-        columns ? `${COLUMN_GRID_CLASS[columns]} gap-x-8 gap-y-6` : undefined,
+        // Gap matches the section's own outer padding (24px, px-6/py-6) in both
+        // directions, so the rhythm between fields is consistent with the
+        // rhythm between the section and its Card edge.
+        columns ? `${COLUMN_GRID_CLASS[columns]} gap-6` : undefined,
         // `divider={false}` is an explicit escape hatch for a section a consumer
         // knows will always render first; the default (divider above every
         // non-first section) is handled automatically by :not(:first-child) above.

@@ -164,6 +164,8 @@ Every row must independently respond to its own container width per the primitiv
 
 ## Prompt 7 — Listvyer (grids) ska vara full bredd
 
+**Beslut: inte genomfört.** Vi valde att behålla nuvarande beteende (listvyer/grids ligger kvar inom samma cappade max-width som resten av sidan) — ingen ändring gjord för den här prompten.
+
 ```
 The Customers list view, and any other page whose primary content is a data grid inside a card (e.g. Contact person(s), Relationships), should render full width/full screen — exempt from the page's normal capped content max-width. Use a flush CardSection for the grid content, and ensure the containing layout doesn't apply the standard max-width cap to these specific views.
 

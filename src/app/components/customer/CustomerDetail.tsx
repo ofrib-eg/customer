@@ -19,7 +19,7 @@ import { NewOfferModal } from "./NewOfferModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { motion as Motion, AnimatePresence } from "motion/react";
 import { Check, X, Link as LinkIcon, MoreHorizontal, Info, Pencil, Plus } from "lucide-react";
-import { Card, CardContent, CardSection, CardRowAuto, CardRowSplit } from "@/app/components/ui/card";
+import { Card, CardSection, CardRowAuto, CardRowSplit } from "@/app/components/ui/card";
 import { DETAIL_CARD_CLASS, SectionHeader, FieldLabel, InputField, SelectField, ReadOnlyField, CheckboxField, DateField } from "./sharedFields";
 
 type BusinessAddressType = "general" | "delivery" | "invoice";
@@ -410,11 +410,11 @@ function AddressSection({
       )}
 
       {/* Address is edited via modal, matching the private customer contact card pattern */}
-      <ReadOnlyField compact hideIfEmpty label="Address line 1" value={fields.addressLine1} />
-      <ReadOnlyField compact hideIfEmpty label="Address line 2" value={fields.addressLine2} />
-      <ReadOnlyField compact hideIfEmpty label="Postal code" value={fields.postalCode} />
-      <ReadOnlyField compact hideIfEmpty label="City" value={fields.city} />
-      <ReadOnlyField compact hideIfEmpty label="Country" value={fields.country} />
+      <ReadOnlyField hideIfEmpty label="Address line 1" value={fields.addressLine1} />
+      <ReadOnlyField hideIfEmpty label="Address line 2" value={fields.addressLine2} />
+      <ReadOnlyField hideIfEmpty label="Postal code" value={fields.postalCode} />
+      <ReadOnlyField hideIfEmpty label="City" value={fields.city} />
+      <ReadOnlyField hideIfEmpty label="Country" value={fields.country} />
     </div>
   );
 }
@@ -718,13 +718,19 @@ export function CustomerDetail() {
     setCustomerNotes(saved !== undefined ? saved : EXAMPLE_CUSTOMER_NOTES[customer.id] ?? "");
   }, [customer.id]);
 
-  // Auto-grow the notes textarea to fit its content, up to a max height, then scroll internally
+  // The notes textarea fills the card's available height by default (flex-1 in
+  // its className). This effect only overrides that with an explicit height
+  // once the content actually needs more room than the card provides, growing
+  // up to NOTES_MAX_HEIGHT before switching to internal scrolling - it never
+  // shrinks the box below what flex-1 already gives it.
   const notesTextareaRef = React.useRef<HTMLTextAreaElement>(null);
   React.useEffect(() => {
     const el = notesTextareaRef.current;
     if (!el) return;
+    const flexHeight = el.getBoundingClientRect().height;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, NOTES_MAX_HEIGHT)}px`;
+    const contentHeight = Math.min(el.scrollHeight, NOTES_MAX_HEIGHT);
+    el.style.height = contentHeight > flexHeight ? `${contentHeight}px` : "";
   }, [customerNotes]);
 
   // When a customer who wasn't already a credit customer gets the checkbox ticked,
@@ -1138,22 +1144,21 @@ export function CustomerDetail() {
                       {/* Field-level collapse (step 1 pattern): grid + 1fr tracks instead of the old
                           fixed-width flex row, so 3 columns actually reach the container's edges
                           and collapse to a single column when the card itself gets narrow. */}
-                      <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-x-8 gap-y-4">
+                      <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-8">
                         <div>
-                          <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
+                          <ReadOnlyField label="Customer number" value={customer.customerNumber} />
                           {isInactive ? (
-                            <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                            <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
                           ) : (
-                            <InputField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                            <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
                           )}
                         </div>
                         <div>
-                          <ReadOnlyField compact label="Store" value={getStoreOrProfileLabel(customer.store)} />
+                          <ReadOnlyField label="Store" value={getStoreOrProfileLabel(customer.store)} />
                           {isInactive ? (
-                            <ReadOnlyField compact label="Customer group" value={customer.customerGroup || "–"} />
+                            <ReadOnlyField label="Customer group" value={customer.customerGroup || "–"} />
                           ) : (
                             <SelectField
-                              compact
                               label="Customer group"
                               value={customer.customerGroup}
                               options={[
@@ -1166,7 +1171,7 @@ export function CustomerDetail() {
                           )}
                         </div>
                         <div>
-                          <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
+                          <CheckboxField label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
                         </div>
                       </div>
 
@@ -1187,21 +1192,21 @@ export function CustomerDetail() {
                           <Pencil className="size-[16px]" />
                         </button>
                       </div>
-                      <div className="flex flex-col @md:flex-row @md:justify-between gap-y-4">
-                        <div className="w-full @md:w-[260px]">
-                          <ReadOnlyField compact label="First name" value={contactFields.firstName} />
-                          <ReadOnlyField compact label="Last name" value={contactFields.lastName} />
-                          <ReadOnlyField compact label="Birth date" value={contactFields.birthDate} />
-                          <ReadOnlyField compact label="Gender" value={contactFields.gender} />
+                      <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-8">
+                        <div>
+                          <ReadOnlyField label="First name" value={contactFields.firstName} />
+                          <ReadOnlyField label="Last name" value={contactFields.lastName} />
+                          <ReadOnlyField label="Birth date" value={contactFields.birthDate} />
+                          <ReadOnlyField label="Gender" value={contactFields.gender} />
                         </div>
-                        <div className="w-full @md:w-[260px]">
-                          <ReadOnlyField compact label="Email" value={contactFields.email} />
-                          <ReadOnlyField compact label="Mobile number" value={contactFields.mobileNumber} />
-                          <ReadOnlyField compact label="SSN" value={contactFields.ssn} />
+                        <div>
+                          <ReadOnlyField label="Email" value={contactFields.email} />
+                          <ReadOnlyField label="Mobile number" value={contactFields.mobileNumber} />
+                          <ReadOnlyField label="SSN" value={contactFields.ssn} />
                         </div>
-                        <div className="w-full @md:w-[260px]">
-                          <ReadOnlyField compact label="Loyalty program name" value={contactFields.loyaltyProgramName} />
-                          <ReadOnlyField compact label="Ext. identity number" value={contactFields.extIdentityNumber} required />
+                        <div>
+                          <ReadOnlyField label="Loyalty program name" value={contactFields.loyaltyProgramName} />
+                          <ReadOnlyField label="Ext. identity number" value={contactFields.extIdentityNumber} required />
                         </div>
                       </div>
                     </CardSection>
@@ -1313,8 +1318,8 @@ export function CustomerDetail() {
                     </CardRowAuto>
                   )}
 
-                  {/* Address + Notes */}
-                  <div className="grid grid-cols-1 @md:grid-cols-2 gap-6">
+                  {/* Address + Notes - Auto tile row (step 3), 2 cards, expand-to-fill */}
+                  <CardRowAuto maxColumns={2}>
                     <Card className={DETAIL_CARD_CLASS}>
                       <CardSection className="p-8">
                         <div className="flex items-center justify-between mb-[10px]">
@@ -1323,11 +1328,11 @@ export function CustomerDetail() {
                             <Pencil className="size-[16px]" />
                           </button>
                         </div>
-                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value={addressFields.addressLine1} />
-                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value={addressFields.addressLine2} />
-                        <ReadOnlyField compact hideIfEmpty label="Postal code" value={addressFields.postalCode} />
-                        <ReadOnlyField compact hideIfEmpty label="City" value={addressFields.city} />
-                        <ReadOnlyField compact hideIfEmpty label="Country" value={addressFields.country} />
+                        <ReadOnlyField hideIfEmpty label="Address line 1" value={addressFields.addressLine1} />
+                        <ReadOnlyField hideIfEmpty label="Address line 2" value={addressFields.addressLine2} />
+                        <ReadOnlyField hideIfEmpty label="Postal code" value={addressFields.postalCode} />
+                        <ReadOnlyField hideIfEmpty label="City" value={addressFields.city} />
+                        <ReadOnlyField hideIfEmpty label="Country" value={addressFields.country} />
                       </CardSection>
                     </Card>
 
@@ -1339,17 +1344,17 @@ export function CustomerDetail() {
                           ref={notesTextareaRef}
                           value={customerNotes}
                           onChange={(e) => setCustomerNotes(e.target.value)}
-                          className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
+                          className="flex-1 border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
                           style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
                         />
                       </CardSection>
                     </Card>
-                  </div>
+                  </CardRowAuto>
 
-                  {/* Relationships - full width */}
+                  {/* Relationships - full width, flush CardSection (data grid) */}
                   <Card className={DETAIL_CARD_CLASS}>
-                    <CardSection className="p-8">
-                      <div className="flex items-center justify-between mb-[10px]">
+                    <CardSection flush className="pt-8 pb-8">
+                      <div className="flex items-center justify-between mb-[10px] px-8">
                         <SectionHeader className="">Relationships</SectionHeader>
                         <button
                           type="button"
@@ -1627,24 +1632,23 @@ export function CustomerDetail() {
                       fixed-width flex row, so 3 columns actually reach the container's edges and
                       collapse to a single column when the card itself gets narrow, instead of
                       overflowing/colliding at intermediate widths. */}
-                  <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-x-8 gap-y-4">
+                  <div className="grid grid-cols-1 @min-[820px]:grid-cols-3 gap-8">
                     <div>
-                      <ReadOnlyField compact label="Customer number" value={customer.customerNumber} />
+                      <ReadOnlyField label="Customer number" value={customer.customerNumber} />
                       {isInactive || organizationStatus === "deleted" ? (
-                        <ReadOnlyField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                        <ReadOnlyField label="Ext. customer number" value={customer.extCustomerNumber} />
                       ) : (
-                        <InputField compact label="Ext. customer number" value={customer.extCustomerNumber} />
+                        <InputField label="Ext. customer number" value={customer.extCustomerNumber} />
                       )}
-                      <ReadOnlyField compact label="Profile" value={getStoreOrProfileLabel(customer.store)} />
+                      <ReadOnlyField label="Profile" value={getStoreOrProfileLabel(customer.store)} />
                     </div>
                     <div>
-                      <InputField compact label="Email" value={customer.email} />
-                      <InputField compact label="Phone number" value={customer.phone} />
+                      <InputField label="Email" value={customer.email} />
+                      <InputField label="Phone number" value={customer.phone} />
                       {isInactive ? (
-                        <ReadOnlyField compact label="Customer group" value={customer.customerGroup || "–"} />
+                        <ReadOnlyField label="Customer group" value={customer.customerGroup || "–"} />
                       ) : (
                         <SelectField
-                          compact
                           label="Customer group"
                           value={customer.customerGroup}
                           options={[
@@ -1657,7 +1661,7 @@ export function CustomerDetail() {
                       )}
                     </div>
                     <div>
-                      <CheckboxField compact label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
+                      <CheckboxField label="Credit customer" checked={creditCustomerDraft} onChange={handleCreditCustomerToggle} />
                     </div>
                   </div>
 
@@ -1711,10 +1715,10 @@ export function CustomerDetail() {
                       ) : null}
 
                       <div className="flex items-start gap-[16px]">
-                        <div className="grid grid-cols-2 gap-x-8 flex-1">
+                        <div className="grid grid-cols-1 @min-[480px]:grid-cols-2 gap-8 flex-1">
                           <div>
                             {isEditingOrgIdentity ? (
-                              <InputField compact label="Organisation name" value={orgNameDraft} onChange={setOrgNameDraft} />
+                              <InputField label="Organisation name" value={orgNameDraft} onChange={setOrgNameDraft} />
                             ) : (
                               <>
                                 <FieldLabel>Organisation name</FieldLabel>
@@ -1722,36 +1726,36 @@ export function CustomerDetail() {
                                   <button
                                     type="button"
                                     onClick={() => navigate(`/customer/organizations/${(customer as any).organizationRegisterId}`)}
-                                    className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[5px] cursor-pointer hover:text-[#1c7862]"
+                                    className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[16px] cursor-pointer hover:text-[#1c7862]"
                                   >
                                     {customer.customerName}
                                   </button>
                                 ) : (
-                                  <div className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[5px]">
+                                  <div className="h-[32px] flex items-center font-['Roboto:Regular',sans-serif] text-[14px] leading-[17px] text-[#1a1a1a] underline mb-[16px]">
                                     {customer.customerName}
                                   </div>
                                 )}
                               </>
                             )}
                             {isEditingOrgIdentity ? (
-                              <InputField compact label="Organisation number" value={orgNumberDraft} onChange={setOrgNumberDraft} />
+                              <InputField label="Organisation number" value={orgNumberDraft} onChange={setOrgNumberDraft} />
                             ) : (
-                              <ReadOnlyField compact label="Organisation number" value={customer.orgNumber} />
+                              <ReadOnlyField label="Organisation number" value={customer.orgNumber} />
                             )}
                             {isExternalOrg && (
-                              <ReadOnlyField compact hideIfEmpty label="Duns number" value={customer.dunsNumber || ""} />
+                              <ReadOnlyField hideIfEmpty label="Duns number" value={customer.dunsNumber || ""} />
                             )}
                           </div>
                           <div>
                             {isEditingOrgIdentity ? (
-                              <SelectField compact label="Organization type" value={orgTypeDraft} options={ORG_TYPE_OPTIONS} onChange={setOrgTypeDraft} />
+                              <SelectField label="Organization type" value={orgTypeDraft} options={ORG_TYPE_OPTIONS} onChange={setOrgTypeDraft} />
                             ) : (
-                              <ReadOnlyField compact label="Organization type" value={customer.organizationType || "Branch"} />
+                              <ReadOnlyField label="Organization type" value={customer.organizationType || "Branch"} />
                             )}
                             {isEditingOrgIdentity ? (
-                              <InputField compact label="Branch number" value={orgBranchNumberDraft} onChange={setOrgBranchNumberDraft} />
+                              <InputField label="Branch number" value={orgBranchNumberDraft} onChange={setOrgBranchNumberDraft} />
                             ) : (
-                              <ReadOnlyField compact hideIfEmpty label="Branch number" value={customer.branchNumber || customer.orgNumber} />
+                              <ReadOnlyField hideIfEmpty label="Branch number" value={customer.branchNumber || customer.orgNumber} />
                             )}
                           </div>
                         </div>
@@ -1768,7 +1772,7 @@ export function CustomerDetail() {
                       ref={notesTextareaRef}
                       value={customerNotes}
                       onChange={(e) => setCustomerNotes(e.target.value)}
-                      className="border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
+                      className="flex-1 border border-[#ccc] rounded-[2px] p-[10px] min-h-[80px] font-['Roboto:Regular',sans-serif] text-[14px] leading-[20px] text-[#1a1a1a] outline-none focus:border-[#1c7862] resize-none overflow-y-auto"
                       style={{ maxHeight: `${NOTES_MAX_HEIGHT}px` }}
                     />
                   </CardSection>
@@ -1870,7 +1874,6 @@ export function CustomerDetail() {
                                 Adding an address here also updates the organisation record.
                               </p>
                               <SelectField
-                                compact
                                 required
                                 label="Address type"
                                 value={newAddressType}
@@ -1884,11 +1887,11 @@ export function CustomerDetail() {
                                 onChange={(v) => setNewAddressType(v as "delivery" | "invoice")}
                                 hideBlankOption
                               />
-                              <InputField compact required label="Address line 1" value={newAddressDraft.addressLine1} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine1: v }))} />
-                              <InputField compact label="Address line 2" value={newAddressDraft.addressLine2} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine2: v }))} />
-                              <InputField compact required label="Postal code" value={newAddressDraft.postalCode} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, postalCode: v }))} />
-                              <InputField compact required label="City" value={newAddressDraft.city} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, city: v }))} />
-                              <SelectField compact required label="Country" value={newAddressDraft.country} options={ADDRESS_COUNTRY_OPTIONS} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, country: v }))} />
+                              <InputField required label="Address line 1" value={newAddressDraft.addressLine1} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine1: v }))} />
+                              <InputField label="Address line 2" value={newAddressDraft.addressLine2} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, addressLine2: v }))} />
+                              <InputField required label="Postal code" value={newAddressDraft.postalCode} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, postalCode: v }))} />
+                              <InputField required label="City" value={newAddressDraft.city} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, city: v }))} />
+                              <SelectField required label="Country" value={newAddressDraft.country} options={ADDRESS_COUNTRY_OPTIONS} onChange={(v) => setNewAddressDraft((prev) => ({ ...prev, country: v }))} />
                               <div className="flex items-center gap-[8px] mt-[16px]">
                                 <button
                                   type="button"
@@ -1927,31 +1930,31 @@ export function CustomerDetail() {
                     <Card className={DETAIL_CARD_CLASS}>
                       <CardSection className="p-8">
                         <SectionHeader>Address</SectionHeader>
-                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Country" value="–" />
                       </CardSection>
                     </Card>
                     <Card className={DETAIL_CARD_CLASS}>
                       <CardSection className="p-8">
                         <SectionHeader>Delivery address</SectionHeader>
-                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Country" value="–" />
                       </CardSection>
                     </Card>
                     <Card className={DETAIL_CARD_CLASS}>
                       <CardSection className="p-8">
                         <SectionHeader>Invoice address</SectionHeader>
-                        <ReadOnlyField compact hideIfEmpty label="Address line 1" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Address line 2" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Postal code" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="City" value="–" />
-                        <ReadOnlyField compact hideIfEmpty label="Country" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 1" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Address line 2" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Postal code" value="–" />
+                        <ReadOnlyField hideIfEmpty label="City" value="–" />
+                        <ReadOnlyField hideIfEmpty label="Country" value="–" />
                       </CardSection>
                     </Card>
                   </>
@@ -1961,7 +1964,7 @@ export function CustomerDetail() {
               {/* Credit - visibility follows the checkbox live; Save persists the choice */}
               {creditCustomerDraft && (
               <Card className={DETAIL_CARD_CLASS}>
-                <CardContent className="p-8">
+                <CardSection className="p-8">
                   <div className="flex items-center justify-between mb-[10px]">
                     <div className="flex items-center gap-[10px]">
                       <SectionHeader className="">Credit</SectionHeader>
@@ -2010,16 +2013,16 @@ export function CustomerDetail() {
                       <DateField label="Balance due date" value={balanceDueDate} onChange={setBalanceDueDate} disabled={creditLocked} />
                     </div>
                   </div>
-                </CardContent>
+                </CardSection>
               </Card>
               )}
 
-              {/* Contact persons - full width */}
+              {/* Contact persons - full width, flush CardSection (data grid manages its own edges) */}
               <div ref={contactsWrapperRef} style={contactsExpandStyle}>
                 <Card className={DETAIL_CARD_CLASS}>
-                  <CardContent className="p-8">
+                  <CardSection flush>
                     <ContactPersonsGrid isExpanded={isContactsExpanded} onToggleExpand={() => setIsContactsExpanded((prev) => !prev)} />
-                  </CardContent>
+                  </CardSection>
                 </Card>
               </div>
             </div>

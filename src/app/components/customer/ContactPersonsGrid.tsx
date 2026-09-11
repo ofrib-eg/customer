@@ -346,9 +346,9 @@ export function ContactPersonsGrid({ isExpanded, onToggleExpand }: { isExpanded:
   };
 
   return (
-    <div className="flex flex-col gap-[15px]">
+    <div className="flex flex-col gap-[15px] pt-8 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-8">
         <h3 className="font-['Roboto_Condensed',sans-serif] font-bold text-[16px] leading-[19px] tracking-[0px] text-[#1a1a1a] uppercase">
           Contact person(s)
         </h3>
