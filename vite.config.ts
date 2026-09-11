@@ -17,6 +17,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  // GitHub Pages serves this repo from https://ofrib-eg.github.io/customer/,
+  // so all built asset paths need this prefix.
+  base: '/customer/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
