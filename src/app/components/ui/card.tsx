@@ -8,16 +8,27 @@ import { cn } from "./utils";
  * `CardRowAuto`/`CardRowSplit` commonly pass a conditional block like
  * `{cond ? <>{a}{b}{c}</> : <>{d}</>}`, naively using `toArray` would always
  * see "1 child" and collapse the row to a single column regardless of how
- * many cards actually render. This recursively unwraps Fragments (and drops
- * null/undefined/false/true, same as `toArray`) so row primitives measure the
- * real, renderable child count.
+ * many cards actually render. This recursively unwraps Fragments so row
+ * primitives measure the real, renderable child count.
+ *
+ * Dropped (never rendered by React, so must not count as a card):
+ * - null / undefined / booleans (same as `toArray`)
+ * - empty or whitespace-only strings. This one matters: a guard like
+ *   `{address.addressLine1 && <Card/>}` evaluates to `""` (not `false`) when
+ *   the field is an empty string, and `""` is a legitimate ReactNode that
+ *   `toArray` keeps — which silently inflated the column count by one for
+ *   every empty-string-guarded card (e.g. 2 visible cards → 3-column grid).
  */
 function flattenRowChildren(children: React.ReactNode): React.ReactNode[] {
   const result: React.ReactNode[] = [];
   React.Children.forEach(children, (child) => {
     if (React.isValidElement(child) && child.type === React.Fragment) {
       result.push(...flattenRowChildren((child.props as { children?: React.ReactNode }).children));
-    } else if (child !== null && child !== undefined && typeof child !== "boolean") {
+    } else if (child === null || child === undefined || typeof child === "boolean") {
+      return;
+    } else if (typeof child === "string" && child.trim() === "") {
+      return;
+    } else {
       result.push(child);
     }
   });
@@ -44,7 +55,14 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground @container flex flex-col gap-6 rounded-xl border",
+        // `w-full` is required here, not just cosmetic: `@container` sets
+        // `container-type: inline-size`, which forces size containment on
+        // this element. Size-contained elements as grid/flex items are prone
+        // to sizing to their own content (fit-content) instead of stretching
+        // to fill the track, in exactly the "cards leave empty space instead
+        // of splitting the row evenly" way — an explicit `w-full` removes the
+        // ambiguity instead of relying on the parent grid's stretch default.
+        "bg-card text-card-foreground @container w-full flex flex-col gap-6 rounded-xl border",
         className,
       )}
       {...props}
